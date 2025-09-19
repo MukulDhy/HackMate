@@ -1,0 +1,310 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* HackForce Cyberpunk Design System - Glassmorphism + Neon Accents */
+
+@layer base {
+  :root {
+    /* Core Cyberpunk Colors - Dark Mode */
+    --background: 240 10% 3.9%;           /* Deep dark background */
+    --background-secondary: 240 8% 8%;     /* Slightly lighter background */
+    --foreground: 210 40% 98%;             /* Bright text */
+
+    /* Glass morphism surfaces */
+    --glass: 240 10% 8% / 0.6;             /* Translucent glass */
+    --glass-border: 240 30% 40% / 0.2;     /* Subtle glass borders */
+    
+    /* Neon accent colors */
+    --neon-cyan: 180 100% 50%;             /* Electric cyan */
+    --neon-magenta: 300 100% 50%;          /* Bright magenta */
+    --neon-lime: 90 100% 50%;              /* Electric lime */
+    --neon-purple: 270 100% 70%;           /* Bright purple */
+    
+    /* Primary brand colors */
+    --primary: 180 100% 50%;               /* Cyan primary */
+    --primary-foreground: 240 10% 3.9%;   /* Dark text on cyan */
+    --primary-glow: 180 100% 50% / 0.3;    /* Cyan glow */
+
+    /* Secondary colors */
+    --secondary: 270 100% 70%;             /* Purple secondary */
+    --secondary-foreground: 210 40% 98%;   /* Light text */
+    --secondary-glow: 270 100% 70% / 0.3;  /* Purple glow */
+
+    /* Card and surfaces */
+    --card: 240 10% 8% / 0.8;              /* Glass card */
+    --card-foreground: 210 40% 98%;        /* Light text on cards */
+
+    /* Interactive elements */
+    --accent: 300 100% 50%;                /* Magenta accent */
+    --accent-foreground: 210 40% 98%;      /* Light text on accent */
+    --accent-glow: 300 100% 50% / 0.4;     /* Magenta glow */
+
+    /* UI elements */
+    --muted: 240 8% 15%;                   /* Muted backgrounds */
+    --muted-foreground: 240 10% 60%;       /* Muted text */
+    
+    --border: 240 30% 40% / 0.3;           /* Subtle borders */
+    --input: 240 10% 8% / 0.9;             /* Input backgrounds */
+    --ring: 180 100% 50%;                  /* Focus rings */
+
+    /* Success/Warning/Error */
+    --success: 120 100% 50%;               /* Neon green */
+    --warning: 45 100% 50%;                /* Neon orange */
+    --destructive: 0 100% 50%;             /* Neon red */
+    --destructive-foreground: 210 40% 98%; /* Light text on red */
+
+    /* Layout */
+    --radius: 0.75rem;                     /* Rounded corners */
+    --glass-blur: 12px;                    /* Backdrop blur */
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
+    --gradient-hero: linear-gradient(135deg, hsl(var(--background)) 0%, hsl(var(--background-secondary)) 50%, hsl(var(--primary) / 0.1) 100%);
+    --gradient-card: linear-gradient(135deg, hsl(var(--glass)), hsl(var(--background-secondary) / 0.4));
+    
+    /* Shadows and glows */
+    --shadow-glow: 0 0 30px hsl(var(--primary-glow));
+    --shadow-strong: 0 10px 40px -10px hsl(var(--background) / 0.8);
+    --shadow-card: 0 8px 32px -8px hsl(var(--background) / 0.6);
+    
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+
+  .light {
+    /* Core Colors - Light Mode */
+    --background: 0 0% 100%;               /* Pure white background */
+    --background-secondary: 240 5% 96%;    /* Light gray background */
+    --foreground: 240 10% 3.9%;            /* Dark text */
+
+    /* Glass morphism surfaces - Light Mode */
+    --glass: 0 0% 100% / 0.8;              /* Light translucent glass */
+    --glass-border: 240 10% 80% / 0.4;     /* Light glass borders */
+    
+    /* Neon accent colors - Adjusted for light mode */
+    --neon-cyan: 180 80% 40%;              /* Darker cyan for readability */
+    --neon-magenta: 300 80% 40%;           /* Darker magenta */
+    --neon-lime: 90 80% 40%;               /* Darker lime */
+    --neon-purple: 270 80% 50%;            /* Darker purple */
+    
+    /* Primary brand colors - Light Mode */
+    --primary: 180 80% 40%;                /* Darker cyan primary */
+    --primary-foreground: 0 0% 100%;       /* White text on cyan */
+    --primary-glow: 180 80% 40% / 0.2;     /* Subtle cyan glow */
+
+    /* Secondary colors - Light Mode */
+    --secondary: 270 80% 50%;              /* Darker purple secondary */
+    --secondary-foreground: 0 0% 100%;     /* White text */
+    --secondary-glow: 270 80% 50% / 0.2;   /* Subtle purple glow */
+
+    /* Card and surfaces - Light Mode */
+    --card: 0 0% 100%;                     /* White cards */
+    --card-foreground: 240 10% 3.9%;      /* Dark text on cards */
+
+    /* Interactive elements - Light Mode */
+    --accent: 300 80% 40%;                 /* Darker magenta accent */
+    --accent-foreground: 0 0% 100%;        /* White text on accent */
+    --accent-glow: 300 80% 40% / 0.2;      /* Subtle magenta glow */
+
+    /* UI elements - Light Mode */
+    --muted: 240 5% 92%;                   /* Light muted backgrounds */
+    --muted-foreground: 240 5% 40%;        /* Dark muted text */
+    
+    --border: 240 10% 80%;                 /* Light borders */
+    --input: 0 0% 100%;                    /* White input backgrounds */
+    --ring: 180 80% 40%;                   /* Focus rings */
+
+    /* Success/Warning/Error - Light Mode */
+    --success: 120 60% 40%;                /* Darker green */
+    --warning: 45 80% 50%;                 /* Orange */
+    --destructive: 0 80% 50%;              /* Red */
+    --destructive-foreground: 0 0% 100%;   /* White text on red */
+
+    /* Gradients - Light Mode */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
+    --gradient-hero: linear-gradient(135deg, hsl(var(--background)) 0%, hsl(var(--background-secondary)) 50%, hsl(var(--primary) / 0.05) 100%);
+    --gradient-card: linear-gradient(135deg, hsl(var(--glass)), hsl(var(--background-secondary) / 0.6));
+    
+    /* Shadows and glows - Light Mode */
+    --shadow-glow: 0 0 20px hsl(var(--primary-glow));
+    --shadow-strong: 0 10px 40px -10px hsl(0 0% 0% / 0.1);
+    --shadow-card: 0 8px 32px -8px hsl(0 0% 0% / 0.08);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-exo overflow-x-hidden;
+    font-family: 'Exo 2', sans-serif;
+  }
+  
+  h1, h2, h3, .font-orbitron {
+    font-family: 'Orbitron', monospace;
+  }
+}
+
+@layer components {
+  /* Glassmorphism utility classes */
+  .glass {
+    @apply bg-glass backdrop-blur-[var(--glass-blur)] border border-glass-border;
+  }
+  
+  .glass-card {
+    @apply glass rounded-[var(--radius)] shadow-card;
+  }
+  
+  /* Neon glow effects */
+  .neon-glow {
+    box-shadow: var(--shadow-glow);
+  }
+  
+  .neon-glow-hover {
+    @apply transition-all duration-300;
+  }
+  
+  .neon-glow-hover:hover {
+    box-shadow: var(--shadow-glow);
+    transform: translateY(-2px);
+  }
+  
+  /* Gradient backgrounds */
+  .bg-gradient-primary {
+    background: var(--gradient-primary);
+  }
+  
+  .bg-gradient-hero {
+    background: var(--gradient-hero);
+  }
+  
+  .bg-gradient-card {
+    background: var(--gradient-card);
+  }
+  
+  /* Animated backgrounds */
+  .animated-bg {
+    background: linear-gradient(-45deg, 
+      hsl(var(--background)), 
+      hsl(var(--background-secondary)), 
+      hsl(var(--primary) / 0.1), 
+      hsl(var(--secondary) / 0.1));
+    background-size: 400% 400%;
+    animation: gradientShift 15s ease infinite;
+  }
+  
+  /* Custom scrollbar */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: hsl(var(--background));
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary) / 0.5);
+    border-radius: 4px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.8);
+  }
+}
+
+@layer utilities {
+  /* Animation keyframes */
+  @keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-20px); }
+  }
+  
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 20px hsl(var(--primary-glow)); }
+    50% { box-shadow: 0 0 40px hsl(var(--primary-glow)), 0 0 60px hsl(var(--primary-glow)); }
+  }
+  
+  @keyframes rotate-slow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  
+  /* Animation utilities */
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+  
+  .animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+  
+  .animate-rotate-slow {
+    animation: rotate-slow 20s linear infinite;
+  }
+  
+  /* HackMate Logo specific animations */
+  @keyframes neon-pulse {
+    0%, 100% { 
+      filter: drop-shadow(0 0 5px rgba(255, 20, 147, 0.5)) drop-shadow(0 0 10px rgba(0, 255, 255, 0.3));
+    }
+    50% { 
+      filter: drop-shadow(0 0 10px rgba(255, 20, 147, 0.8)) drop-shadow(0 0 20px rgba(0, 255, 255, 0.6));
+    }
+  }
+  
+  @keyframes circuit-glow {
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 1; }
+  }
+  
+  .animate-neon-pulse {
+    animation: neon-pulse 2s ease-in-out infinite;
+  }
+  
+  .animate-circuit-glow {
+    animation: circuit-glow 1.5s ease-in-out infinite;
+  }
+  
+  /* Responsive logo scaling with better visibility */
+  .logo-responsive {
+    @apply transition-all duration-300 ease-out;
+    filter: drop-shadow(0 0 8px rgba(0, 255, 255, 0.3)) drop-shadow(0 0 4px rgba(255, 20, 147, 0.2));
+  }
+  
+  .logo-responsive:hover {
+    transform: scale(1.05) rotate(1deg);
+    filter: drop-shadow(0 0 12px rgba(0, 255, 255, 0.5)) drop-shadow(0 0 8px rgba(255, 20, 147, 0.4));
+  }
+  
+  @media (max-width: 640px) {
+    .logo-responsive {
+      transform: scale(0.9);
+      filter: drop-shadow(0 0 6px rgba(0, 255, 255, 0.4)) drop-shadow(0 0 3px rgba(255, 20, 147, 0.3));
+    }
+    .logo-responsive:hover {
+      transform: scale(0.95) rotate(1deg);
+      filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.6)) drop-shadow(0 0 6px rgba(255, 20, 147, 0.5));
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .logo-responsive {
+      transform: scale(0.85);
+      filter: drop-shadow(0 0 5px rgba(0, 255, 255, 0.5)) drop-shadow(0 0 3px rgba(255, 20, 147, 0.4));
+    }
+    .logo-responsive:hover {
+      transform: scale(0.9) rotate(1deg);
+      filter: drop-shadow(0 0 8px rgba(0, 255, 255, 0.7)) drop-shadow(0 0 5px rgba(255, 20, 147, 0.6));
+    }
+  }
+}

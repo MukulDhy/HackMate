@@ -1,0 +1,10 @@
+.qodo
+node_modules
+node_modules
+frontend
+.env
+logs
+logs/
+logs*
+env
+.env
