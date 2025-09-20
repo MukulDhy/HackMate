@@ -32,6 +32,17 @@ const sendTokenResponse = (user, statusCode, res, message) => {
     email: user.email,
     isEmailVerified: user.isEmailVerified,
     profilePicture: user.profilePicture,
+    skills: user.skills,
+    experience: user.experience,
+    github: user.github,
+    age: user.age,
+    github: user.github,
+    linkedin: user.linkedin,
+    phone: user.phone,
+    currentHackathonId: user.currentHackathonId,
+    userType: user.userType,
+    createdAt: user.createdAt,
+    profileCompletion: user.profileCompletion,
   };
 
   res
