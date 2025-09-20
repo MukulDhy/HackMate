@@ -5,5 +5,4 @@ frontend
 logs
 logs/
 logs*
-env
-.env
+
