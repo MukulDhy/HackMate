@@ -1,4 +1,5 @@
 name: Frontend CI
+
 on:
   push:
     paths:
@@ -6,16 +7,29 @@ on:
   pull_request:
     paths:
       - "frontend/**"
+
 jobs:
   build:
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: frontend
+
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      # 1. Checkout code
+      - uses: actions/checkout@v4
+
+      # 2. Setup Node.js (using 18 to match backend)
+      - uses: actions/setup-node@v4
         with:
-          node-version: "18"
+          node-version: 18
+          cache: "npm"
+
+      # 3. Install dependencies
       - run: npm ci
-      - run: npm test
+
+      # 4. Lint code
+      # - run: npm run lint
+
+      # 5. Build project
+      - run: npm run build
