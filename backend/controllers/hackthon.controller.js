@@ -226,6 +226,7 @@ export const createHackathon = async (req, res) => {
     //   "68c6a9147015d3dcc9bc586c",
     // ];
     // <removed 27-join-hackathon 20-09-2025>]
+    const participants = [];
     const hackathon = await Hackathon.create({
       title,
       description,
