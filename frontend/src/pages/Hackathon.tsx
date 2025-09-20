@@ -150,8 +150,14 @@ const HackathonDetailsPage = () => {
     return state;
   };
 
+
   useEffect(() => {
     fetchHackathonData();
+    // Set up interval to fetch data every minute
+    const interval = setInterval(() => {
+      fetchHackathonData();
+    }, 60000); // 60000 ms = 1 minute
+    return () => clearInterval(interval);
   }, [id]);
 
   useEffect(() => {
@@ -237,6 +243,7 @@ const HackathonDetailsPage = () => {
         }
         await dispatch(leaveHackathon(id)).unwrap();
         setIsJoined(false);
+        setHackathonData((prev) => ({ ...prev, totalMembersJoined: Math.max((prev?.totalMembersJoined || 1) - 1, 0) }));
         showSuccess("Successfully left hackathon");
       } else {
         if (!hackathonState.canJoin) {
@@ -245,6 +252,7 @@ const HackathonDetailsPage = () => {
         }
         await dispatch(joinHackathon(id)).unwrap();
         setIsJoined(true);
+        setHackathonData((prev) => ({ ...prev, totalMembersJoined: (prev?.totalMembersJoined || 0) + 1 }));
         showSuccess("Successfully joined hackathon");
       }
 
