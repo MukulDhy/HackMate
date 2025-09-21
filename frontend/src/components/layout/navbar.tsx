@@ -22,8 +22,10 @@ const publicNavItems = [
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
-  const {isAuthenticated}  = useUser();
+  const {isAuthenticated,user}  = useUser();
   //const isAuthenticated = true;
+
+
 
   const currentNavItems = isAuthenticated ? navItems : publicNavItems;
 
@@ -35,7 +37,7 @@ export function Navbar() {
     >
       <div className="mx-auto max-w-7xl flex items-center justify-between px-6 py-4">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-3 group">
+        <Link to={user && user.id ? "/dashboard" : "/"} className="flex items-center gap-3 group">
           <HackMateLogoProfessional 
             size="md" 
             className="group-hover:scale-105 transition-transform duration-200"
