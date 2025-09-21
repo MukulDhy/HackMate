@@ -128,9 +128,9 @@ export default function Landing() {
                                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                             </Button>
                         </Link>
-                        <Button variant="glass" size="xl">
+                        {/* <Button variant="glass" size="xl">
                             Learn More
-                        </Button>
+                        </Button> */}
                     </motion.div>
                 </PageHeader>
 
@@ -277,9 +277,9 @@ export default function Landing() {
                                         <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                                     </Button>
                                 </Link>
-                                <Button variant="neon" size="xl">
+                                {/* <Button variant="neon" size="xl">
                                     View Demo
-                                </Button>
+                                </Button> */}
                             </div>
                         </GlassCard>
                     </div>
