@@ -156,6 +156,9 @@ const Dashboard = () => {
   useEffect(() => {
     if (!userData) {
       navigate("/login");
+    }else{
+      navigate("/dashboard");
+
     }
   }, [userData, navigate]);
 
