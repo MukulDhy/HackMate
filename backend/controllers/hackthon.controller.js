@@ -217,14 +217,16 @@ export const createHackathon = async (req, res) => {
     } else {
       status = "completed";
     }
-    const participants = [
-      "68b723514b797de7510da085",
-      "68c663a30e8844c002a0b519",
-      "68c6a7ef7015d3dcc9bc5844",
-      "68c6ae4d7015d3dcc9bc58ab",
-      "68c6a9147015d3dcc9bc586c",
-    ];
-
+    // <removed 27-join-hackathon 20-09-2025>[
+    // const participants = [
+    //   "68b723514b797de7510da085",
+    //   "68c663a30e8844c002a0b519",
+    //   "68c6a7ef7015d3dcc9bc5844",
+    //   "68c6ae4d7015d3dcc9bc58ab",
+    //   "68c6a9147015d3dcc9bc586c",
+    // ];
+    // <removed 27-join-hackathon 20-09-2025>]
+    const participants = [];
     const hackathon = await Hackathon.create({
       title,
       description,
@@ -252,13 +254,15 @@ export const createHackathon = async (req, res) => {
       socialLinks,
       status,
     });
-    await Promise.all(
-      participants.map((id) =>
-        User.findByIdAndUpdate(new mongoose.Types.ObjectId(id), {
-          currentHackathonId: hackathon._id,
-        })
-      )
-    );
+    // <removed 27-join-hackathon 20-09-2025>[
+    // await Promise.all(
+    //   participants.map((id) =>
+    //     User.findByIdAndUpdate(new mongoose.Types.ObjectId(id), {
+    //       currentHackathonId: hackathon._id,
+    //     })
+    //   )
+    // );
+    // <removed 27-join-hackathon 20-09-2025>]
     res.status(201).json({
       success: true,
       message: "Hackathon created successfully",
@@ -330,6 +334,7 @@ export const joinHackathon = async (req, res) => {
       hackathon.participants = [];
     }
     hackathon.participants.push(user._id);
+    hackathon.totalMembersJoined = hackathon.participants.length;
     await hackathon.save();
 
     return res.status(200).json({
@@ -394,6 +399,8 @@ export const leaveHackathon = async (req, res) => {
     hackathon.participants = hackathon.participants.filter(
       (participantId) => participantId.toString() !== user._id.toString()
     );
+
+    hackathon.totalMembersJoined = hackathon.participants.length - 1;
     await hackathon.save();
 
     // Clear user's current hackathon

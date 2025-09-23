@@ -44,7 +44,7 @@ export function ProfileDropdown() {
         className="flex items-center gap-3 p-2 rounded-lg hover:bg-primary/10 transition-all duration-300"
       >
         <img 
-          src={user.avatar} 
+          src={user.profilePicture} 
           alt="Profile" 
           className="w-8 h-8 rounded-full ring-2 ring-primary/30"
         />
@@ -62,11 +62,11 @@ export function ProfileDropdown() {
           exit={{ opacity: 0, y: -10, scale: 0.95 }}
           className="absolute top-full right-0 mt-2 w-64 z-50"
         >
-          <GlassCard className="p-4 shadow-strong">
+          <GlassCard className="p-4 shadow-strong text-white">
             {/* User Info Header */}
             <div className="flex items-center gap-3 p-3 mb-3 rounded-lg bg-primary/5 border border-primary/20">
               <img 
-                src={user.avatar} 
+                src={user.profilePicture} 
                 alt="Profile" 
                 className="w-12 h-12 rounded-full ring-2 ring-primary/30"
               />
@@ -84,16 +84,16 @@ export function ProfileDropdown() {
               <Link
                 to="/profile"
                 onClick={() => setIsOpen(false)}
-                className="flex items-center gap-3 px-3 py-2 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all duration-200"
+                className="flex text-white items-center gap-3 px-3 py-2 rounded-lg text-muted-foreground hover:text-black hover:bg-white transition-all duration-200 font-bold"
               >
-                <User className="w-4 h-4" />
+                <User className="w-4 h-4 " />
                 <span>View Profile</span>
               </Link>
               
               <Link
                 to="/settings"
                 onClick={() => setIsOpen(false)}
-                className="flex items-center gap-3 px-3 py-2 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all duration-200"
+                className="flex text-white items-center gap-3 px-3 py-2 rounded-lg text-muted-foreground hover:text-black hover:bg-white transition-all duration-200 font-bold"
               >
                 <Settings className="w-4 h-4" />
                 <span>Settings</span>
@@ -103,7 +103,7 @@ export function ProfileDropdown() {
               
               <button
                 onClick={handleLogout}
-                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-destructive hover:bg-destructive/10 transition-all duration-200"
+                className="w-full  flex items-center gap-3 px-3 py-2 rounded-lg text-destructive hover:bg-destructive/10 transition-all duration-200"
               >
                 <LogOut className="w-4 h-4" />
                 <span>Logout</span>

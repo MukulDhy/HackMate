@@ -7,7 +7,6 @@ on:
   pull_request:
     paths:
       - "backend/**"
-  workflow_dispatch: {}
 
 jobs:
   test:
@@ -15,21 +14,13 @@ jobs:
     defaults:
       run:
         working-directory: backend
+
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with: { node-version: "18" }
-      - name: Cache node modules
-        uses: actions/cache@v4
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
         with:
-          path: backend/node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-      - run: npm ci
-      - run: npm test -- --coverage
-      - name: Upload coverage
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-coverage
-          path: backend/coverage
+          node-version: 18
+
+      - run: npm install
+      - run: npm test

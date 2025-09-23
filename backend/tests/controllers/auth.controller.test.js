@@ -1,7 +1,7 @@
 // tests/controllers/auth.controller.test.js
-const request = require("supertest");
-const app = require("../../app");
-const User = require("../../models/user.model");
+import request from "supertest";
+import app from "../../app";
+import User from "../../models/user.model";
 describe("Auth Controller", () => {
   describe("POST /api/auth/register", () => {
     it("should register a new user", async () => {

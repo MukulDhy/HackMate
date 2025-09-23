@@ -16,8 +16,8 @@ import {
   Award,
   Plus
 } from 'lucide-react';
-import { useUser } from '@/hooks/authHook';
-import { useEffect } from 'react';
+import { useAppSelector, useUser } from '@/hooks/authHook';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 // Default user data structure
@@ -44,10 +44,11 @@ const defaultHackathon = {
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user: userData } = useUser();
-  
+
+  const { hackathon: reduxHackathon } = useAppSelector((state) => state.userHack);
   // Use user data from backend or default values
   const user = userData || defaultUser;
-  
+
   // Generate logo from name
   let logoName = "U";
   if (user.name && user.name !== "User") {
@@ -59,27 +60,37 @@ const Dashboard = () => {
     }
   }
 
-  // Mock hackathon data - in real app this would come from backend
-  const hackathonData = user.currentHackathonId ? {
-    _id: user.currentHackathonId,
-    title: 'AI Innovation Challenge 2024',
-    description: 'Build the next generation of AI applications',
-    startDate: '2024-03-15',
-    endDate: '2024-03-17',
-    status: 'registration_open',
-    totalMembersJoined: 247,
-    maxTeamSize: 4,
-    prizes: [
-      { position: '1st', amount: 10000 },
-      { position: '2nd', amount: 5000 },
-      { position: '3rd', amount: 2500 }
-    ],
-    registrationDeadline: '2024-03-10',
-    venue: 'Virtual',
-    mode: 'online'
-  } : null;
+  // Prefer hackathon from Redux, then user, then default
+  const hackathonData = reduxHackathon && Object.keys(reduxHackathon).length > 0
+    ? reduxHackathon
+    : (user.currentHackathonId ? {
+        _id: user.currentHackathonId,
+        title: 'AI Innovation Challenge 2024',
+        description: 'Build the next generation of AI applications',
+        startDate: '2024-03-15',
+        endDate: '2024-03-17',
+        status: 'registration_open',
+        totalMembersJoined: 247,
+        maxTeamSize: 4,
+        prizes: [
+          { position: '1st', amount: 10000 },
+          { position: '2nd', amount: 5000 },
+          { position: '3rd', amount: 2500 }
+        ],
+        registrationDeadline: '2024-03-10',
+        venue: 'Virtual',
+        mode: 'online'
+      } : null);
+  const [ currentHackathon, setHackathonData ] = useState(hackathonData || defaultHackathon);
 
-  const currentHackathon = hackathonData || defaultHackathon;
+  // Keep currentHackathon in sync with redux/user
+  useEffect(() => {
+    if (hackathonData) {
+      setHackathonData(hackathonData);
+    } else {
+      setHackathonData(defaultHackathon);
+    }
+  }, [reduxHackathon, user.currentHackathonId]);
 
   // User stats with fallback values
   const userStats = {
@@ -145,6 +156,9 @@ const Dashboard = () => {
   useEffect(() => {
     if (!userData) {
       navigate("/login");
+    }else{
+      navigate("/dashboard");
+
     }
   }, [userData, navigate]);
 
@@ -208,7 +222,7 @@ const Dashboard = () => {
         </motion.div>
 
         {/* Current Hackathon Section */}
-        {user.currentHackathonId && (
+  {(currentHackathon && currentHackathon._id && currentHackathon.title !== 'No Active Hackathon') && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -272,8 +286,11 @@ const Dashboard = () => {
                   ) : (
                     <p className="text-muted-foreground">Prize details coming soon</p>
                   )}
-                  <Button variant="neon" size="sm" className="w-full mt-2">
+                  <Button variant="neon" size="sm" className="w-full mt-2" onClick={() => navigate(`/hackathon/${currentHackathon._id}`)}>
                     View Details
+                  </Button>
+                  <Button variant="neon" size="sm" className="w-full mt-2" onClick={() => navigate(`/team`)}>
+                    Testing 
                   </Button>
                 </div>
               </div>
