@@ -92,7 +92,7 @@ export const hackathonService = {
   async joinHackathon(id : string) : Promise<Hackathon>{
      try {
       const response = await api.post(`/api/hackathons/${id}/join`);
-      return response.data.data;
+      return response.data;
     } catch (error) {
       console.error('API Error:', error);
       throw new Error(error.response?.data?.message || 'Failed to fetch hackathon');

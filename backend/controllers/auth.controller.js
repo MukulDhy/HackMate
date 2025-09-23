@@ -4,7 +4,7 @@ import crypto from "crypto";
 import dotenv from "dotenv";
 dotenv.config({ path: "../config/config.env" });
 import { OAuth2Client } from "google-auth-library";
-//import sendMail from "../utils/sendMail.js";
+import sendMail from "../utils/sendMail.js";
 import { sendResponse, ErrorCodes } from "../utils/responseHandler.js";
 import {
   ValidationError,
@@ -12,6 +12,7 @@ import {
   NotFoundError,
   AppError,
 } from "../utils/appError.js";
+import Hackathon from "../models/hackthon.model.js";
 
 // Initialize Google OAuth client
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -108,28 +109,48 @@ export const register = async (req, res, next) => {
       );
     }
 
-    // Create new user
-    const user = await User.create({
-      ...userData,
-    });
+    // Create new user first
+    const user = await User.create({ ...userData });
 
     // Send welcome email
+    const data = {
+      user: { name: userData.name, email: userData.email },
+      websiteLink: process.env.HOST_CLIENT_URL,
+    };
     try {
-      const data = { user: { name: user.name, email: user.email } };
-      const res = true;
-      // const res = await sendMail({
-      //   email: user.email,
-      //   subject: "Mail from HackMate",
-      //   data,
-      //   template: "welcome_mail.ejs",
-      // });
-      console.log("EMAIL : ", res);
+      const mailRes = await sendMail({
+        from: '"HackMate" <no-reply@hackmate.com>',
+        email: userData.email,
+        subject: "Mail from HackMate",
+        data,
+        template: "welcome_mail.ejs",
+      });
+      // If mail is not accepted, treat as failure
+      if (!mailRes || !mailRes.accepted || mailRes.accepted.length === 0) {
+        // Delete the user if email sending fails
+        await User.findByIdAndDelete(user._id);
+        return next(
+          new AppError(
+            "Please provide a valid email address.",
+            400,
+            ErrorCodes.VALIDATION_ERROR
+          )
+        );
+      }
+      // Success: send token response
+      sendTokenResponse(user, 201, res, "User registered successfully");
     } catch (emailError) {
-      // Log email error but don't fail the registration
+      // Delete the user if email sending fails
+      await User.findByIdAndDelete(user._id);
       console.error("Email sending failed:", emailError);
+      return next(
+        new AppError(
+          "Please provide a valid email address.",
+          400,
+          ErrorCodes.VALIDATION_ERROR
+        )
+      );
     }
-
-    sendTokenResponse(user, 201, res, "User registered successfully");
   } catch (error) {
     if (error.name === "ValidationError") {
       const messages = Object.values(error.errors).map((err) => err.message);
@@ -174,6 +195,32 @@ export const login = async (req, res, next) => {
     // Update last login
     user.lastLogin = new Date();
     await user.save({ validateBeforeSave: false });
+
+    if (user.currentHackathonId) {
+      const hackathon = await Hackathon.findById(user.currentHackathonId);
+      if (!hackathon) {
+        user.currentHackathonId = null;
+        await user.save({ validateBeforeSave: false });
+      } else {
+        const now = new Date();
+        // If hackathon is not active, completed, cancelled, or past end date, clear currentHackathonId
+        if (
+          !hackathon.isActive ||
+          ["completed", "cancelled"].includes(hackathon.status) ||
+          now > hackathon.endDate
+        ) {
+          user.currentHackathonId = null;
+        } else if (
+          hackathon.isActive &&
+          hackathon.status === "registration_open" &&
+          now >= hackathon.registrationDeadline &&
+          now <= hackathon.endDate
+        ) {
+          user.currentHackathonId = hackathon._id;
+        }
+        await user.save({ validateBeforeSave: false });
+      }
+    }
 
     sendTokenResponse(user, 200, res, "Login successful");
   } catch (error) {
@@ -492,6 +539,31 @@ export const verifyEmail = async (req, res, next) => {
     }
 
     user.isEmailVerified = true;
+
+    // Check and update currentHackathonId status
+    if (user.currentHackathonId) {
+      const hackathon = await Hackathon.findById(user.currentHackathonId);
+      if (!hackathon) {
+        user.currentHackathonId = null;
+      } else {
+        const now = new Date();
+        if (
+          !hackathon.isActive ||
+          ["completed", "cancelled"].includes(hackathon.status) ||
+          now > hackathon.endDate
+        ) {
+          user.currentHackathonId = null;
+        } else if (
+          hackathon.isActive &&
+          hackathon.status === "registration_open" &&
+          now >= hackathon.registrationDeadline &&
+          now <= hackathon.endDate
+        ) {
+          user.currentHackathonId = hackathon._id;
+        }
+      }
+    }
+
     await user.save({ validateBeforeSave: false });
 
     sendResponse(
@@ -516,7 +588,38 @@ export const verifyEmail = async (req, res, next) => {
 // @access  Private
 export const verifyingProfile = async (req, res, next) => {
   try {
+    const userId = req.user._id;
     const user = req.user;
+    if (user.currentHackathonId) {
+      const user = await User.findById(userId);
+      const hackathon = await Hackathon.findById(user.currentHackathonId);
+      if (!hackathon) {
+        user.currentHackathonId = null;
+      } else {
+        const now = new Date();
+        if (
+          !hackathon.isActive ||
+          ["completed", "cancelled"].includes(hackathon.status) ||
+          now > hackathon.endDate
+        ) {
+          user.currentHackathonId = null;
+        } else if (
+          hackathon.isActive &&
+          hackathon.status === "registration_open" &&
+          now >= hackathon.registrationDeadline &&
+          now <= hackathon.endDate
+        ) {
+          user.currentHackathonId = hackathon._id;
+        }
+      }
+      sendResponse(
+        res,
+        200,
+        { user },
+        "Token verification successful",
+        ErrorCodes.SUCCESS
+      );
+    }
     sendResponse(
       res,
       200,

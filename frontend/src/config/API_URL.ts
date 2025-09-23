@@ -1,7 +1,9 @@
+
+
 let API_URL: string;
 let WS_API_URL: string;
 
-if (process.env.NODE_ENV === "production") {
+if (import.meta.env.VITE_NODE_ENV === "production") {
   API_URL = "https://hackforce.onrender.com";
   WS_API_URL = "wss://hackforce.onrender.com";
 } else {
