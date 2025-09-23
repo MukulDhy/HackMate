@@ -84,7 +84,8 @@ const HackathonDetailsPage = () => {
   const userhack = useAppSelector((state) => state.userHack);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isJoined, setIsJoined] = useState(userhack.joined || false);
+    const { user, isAuthenticated } = useUser();
+  const [isJoined, setIsJoined] = useState( (userhack.joined && userhack.hackathon._id === user.currentHackathonId ) || false);
   const [joining, setJoining] = useState(false);
   const [hackathonState, setHackathonState] = useState({
     canJoin: false,
@@ -98,7 +99,7 @@ const HackathonDetailsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const { user, isAuthenticated } = useUser();
+
 
   // Calculate hackathon state based on dates
   const calculateHackathonState = (data) => {
@@ -177,7 +178,7 @@ const HackathonDetailsPage = () => {
         
         // Navigate to team page after a short delay for animation
         setTimeout(() => {
-          navigate(`/team}`, {
+          navigate(`/team`, {
             state: { 
               hackathonData,
               animation: true 
@@ -203,6 +204,7 @@ const HackathonDetailsPage = () => {
       const response = await axios.get(`${API_URL}/api/hackathons/${id}`);
       
       if (response.data.success) {
+        console.log('Hackathon data:', response.data.data);
         setHackathonData(response.data.data);
       } else {
         setError(response.data.message || 'Failed to fetch hackathon');

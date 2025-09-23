@@ -81,6 +81,12 @@ const hackathonSchema = new Schema(
         rewards: String,
       },
     ],
+    minParticipantsToFormTeam: {
+      type: Number,
+      default: 33,
+      min: 20,
+      max: 100,
+    },
     tags: [
       {
         type: String,

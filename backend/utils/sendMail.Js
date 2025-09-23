@@ -3,7 +3,9 @@ import dotenv from "dotenv";
 dotenv.config({ path: "../config/config.env" });
 import path from "path";
 import ejs from "ejs";
-
+import { fileURLToPath } from "url";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const sendMail = async (options) => {
   try {
     const transporter = nodemailer.createTransport({
@@ -32,8 +34,9 @@ const sendMail = async (options) => {
       html,
     };
 
-    const res = await transporter.sendMail(mailOptions);
-    console.log("Email Responses : ", res);
+  const res = await transporter.sendMail(mailOptions);
+  console.log("Email Responses : ", res);
+  return res;
   } catch (error) {
     throw new Error("Can't send mail || Error: " + error);
   }

@@ -71,19 +71,17 @@ export default function Lobbies() {
   const filteredHackathons = useMemo(() => {
     if (!hackathons.length) return [];
     
-    return hackathons.filter(hackathon => {
-      // Check if hackathon has ended
-      const now = new Date();
-      const endDate = new Date(hackathon.endDate);
-      const isEnded = endDate < now;
-      
-      // If ended, mark as completed
-      if (isEnded && hackathon.status !== 'completed' && hackathon.status !== 'cancelled') {
-        hackathon.status = 'completed';
-      }
-      
-      return true;
-    }).sort((a, b) => {
+    return hackathons
+  .map(hackathon => {
+    const now = new Date();
+    const endDate = new Date(hackathon.endDate);
+    const isEnded = endDate < now;
+    // Return a new object if status needs to be changed
+    if (isEnded && hackathon.status !== 'completed' && hackathon.status !== 'cancelled') {
+      return { ...hackathon, status: 'completed' };
+    }
+    return hackathon;
+  }).sort((a, b) => {
       // Sort based on date filter
       switch (dateFilter) {
         case 'newest':
