@@ -83,8 +83,11 @@ const hackathonSchema = new Schema(
     ],
     minParticipantsToFormTeam: {
       type: Number,
-      default: 33,
-      min: 20,
+      // Testing
+      default: 2,
+      // default: 33,
+      min: 0,
+      // min: 20,
       max: 100,
     },
     tags: [
@@ -159,7 +162,6 @@ const hackathonSchema = new Schema(
     status: {
       type: String,
       enum: [
-        "upcoming",
         "registration_open",
         "registration_closed",
         "ongoing",
