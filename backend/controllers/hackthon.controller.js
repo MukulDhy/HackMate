@@ -90,12 +90,12 @@ export const getHackathon = async (req, res) => {
       });
     }
 
-    if (!hackathon.isActive) {
-      return res.status(404).json({
-        success: false,
-        message: "Hackathon not available",
-      });
-    }
+    // if (!hackathon.isActive) {
+    //   return res.status(404).json({
+    //     success: false,
+    //     message: "Hackathon not available",
+    //   });
+    // }
 
     res.status(200).json({
       success: true,
@@ -208,15 +208,16 @@ export const createHackathon = async (req, res) => {
 
     // Determine initial status based on dates
     let status;
-    if (regDeadline > now) {
-      status = "registration_open";
-    } else if (start > now) {
-      status = "upcoming";
-    } else if (end > now) {
-      status = "ongoing";
-    } else {
-      status = "completed";
-    }
+    // if (regDeadline > now) {
+    //   status = "registration_open";
+    // } else if (start > now) {
+    //   status = "upcoming";
+    // } else if (end > now) {
+    //   status = "ongoing";
+    // } else {
+    //   status = "completed";
+    // }
+    status = "registration_open";
     // <removed 27-join-hackathon 20-09-2025>[
     // const participants = [
     //   "68b723514b797de7510da085",
