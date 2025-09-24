@@ -4,13 +4,13 @@ import { GlassCard } from '@/components/ui/glass-card';
 import { BackgroundScene } from '@/components/3d/background-scene';
 import { Badge } from '@/components/ui/badge';
 import { ProgressRing } from '@/components/ui/progress-ring';
-import { 
-  Users, 
-  Zap, 
-  Target, 
-  Trophy, 
-  Calendar, 
-  Clock, 
+import {
+  Users,
+  Zap,
+  Target,
+  Trophy,
+  Calendar,
+  Clock,
   Star,
   TrendingUp,
   Award,
@@ -64,24 +64,24 @@ const Dashboard = () => {
   const hackathonData = reduxHackathon && Object.keys(reduxHackathon).length > 0
     ? reduxHackathon
     : (user.currentHackathonId ? {
-        _id: user.currentHackathonId,
-        title: 'AI Innovation Challenge 2024',
-        description: 'Build the next generation of AI applications',
-        startDate: '2024-03-15',
-        endDate: '2024-03-17',
-        status: 'registration_open',
-        totalMembersJoined: 247,
-        maxTeamSize: 4,
-        prizes: [
-          { position: '1st', amount: 10000 },
-          { position: '2nd', amount: 5000 },
-          { position: '3rd', amount: 2500 }
-        ],
-        registrationDeadline: '2024-03-10',
-        venue: 'Virtual',
-        mode: 'online'
-      } : null);
-  const [ currentHackathon, setHackathonData ] = useState(hackathonData || defaultHackathon);
+      _id: user.currentHackathonId,
+      title: 'AI Innovation Challenge 2024',
+      description: 'Build the next generation of AI applications',
+      startDate: '2024-03-15',
+      endDate: '2024-03-17',
+      status: 'registration_open',
+      totalMembersJoined: 247,
+      maxTeamSize: 4,
+      prizes: [
+        { position: '1st', amount: 10000 },
+        { position: '2nd', amount: 5000 },
+        { position: '3rd', amount: 2500 }
+      ],
+      registrationDeadline: '2024-03-10',
+      venue: 'Virtual',
+      mode: 'online'
+    } : null);
+  const [currentHackathon, setHackathonData] = useState(hackathonData || defaultHackathon);
 
   // Keep currentHackathon in sync with redux/user
   useEffect(() => {
@@ -106,17 +106,17 @@ const Dashboard = () => {
   };
 
   // Use actual user skills or default ones
-  const skills = user.skills && user.skills.length > 0 
-    ? user.skills.map(skill => ({ 
-        name: skill, 
-        level: Math.floor(Math.random() * 30) + 70, 
-        color: 'neon-cyan' 
-      }))
+  const skills = user.skills && user.skills.length > 0
+    ? user.skills.map(skill => ({
+      name: skill,
+      level: Math.floor(Math.random() * 30) + 70,
+      color: 'neon-cyan'
+    }))
     : [
-        { name: 'JavaScript', level: 85, color: 'neon-cyan' },
-        { name: 'HTML/CSS', level: 90, color: 'neon-lime' },
-        { name: 'React', level: 78, color: 'neon-purple' },
-      ];
+      { name: 'JavaScript', level: 85, color: 'neon-cyan' },
+      { name: 'HTML/CSS', level: 90, color: 'neon-lime' },
+      { name: 'React', level: 78, color: 'neon-purple' },
+    ];
 
   const activeLobbies = [
     {
@@ -156,7 +156,7 @@ const Dashboard = () => {
   useEffect(() => {
     if (!userData) {
       navigate("/login");
-    }else{
+    } else {
       navigate("/dashboard");
 
     }
@@ -175,7 +175,7 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen animated-bg relative overflow-hidden pt-24">
       <BackgroundScene className="absolute inset-0 w-full h-full" />
-      
+
       <div className="relative max-w-7xl mx-auto p-6 space-y-8">
         {/* Welcome Banner */}
         <motion.div
@@ -213,16 +213,21 @@ const Dashboard = () => {
                   </div>
                 </div>
               </div>
-              <Button variant="hero" size="lg" className="group">
+              <Button
+                variant="hero"
+                size="lg"
+                className="group flex items-center justify-center px-4 py-2 text-sm md:text-base md:px-6"
+              >
                 <Plus className="w-5 h-5 mr-2 group-hover:rotate-90 transition-transform" />
                 Join New Hackathon
               </Button>
+
             </div>
           </GlassCard>
         </motion.div>
 
         {/* Current Hackathon Section */}
-  {(currentHackathon && currentHackathon._id && currentHackathon.title !== 'No Active Hackathon') && (
+        {(currentHackathon && currentHackathon._id && currentHackathon.title !== 'No Active Hackathon') && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -235,7 +240,7 @@ const Dashboard = () => {
                   {currentHackathon.status.replace('_', ' ').toUpperCase()}
                 </Badge>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="md:col-span-2">
                   <h3 className="font-orbitron font-semibold text-xl text-foreground mb-2">
@@ -244,7 +249,7 @@ const Dashboard = () => {
                   <p className="text-muted-foreground mb-4 line-clamp-2">
                     {currentHackathon.description}
                   </p>
-                  
+
                   <div className="grid grid-cols-2 gap-4 mb-4">
                     <div>
                       <p className="text-sm text-muted-foreground">Starts</p>
@@ -263,7 +268,7 @@ const Dashboard = () => {
                       <p className="font-medium">{currentHackathon.mode || 'Online'}</p>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-4 text-sm">
                     <span className="flex items-center gap-1">
                       <Users className="w-4 h-4" />
@@ -273,12 +278,12 @@ const Dashboard = () => {
                     <span>Team Size: {currentHackathon.maxTeamSize || 'Solo'}</span>
                   </div>
                 </div>
-                
+
                 <div className="space-y-3">
                   <h4 className="font-orbitron font-semibold text-foreground">Prizes</h4>
                   {currentHackathon.prizes && currentHackathon.prizes.length > 0 ? (
                     currentHackathon.prizes.slice(0, 3).map((prize, index) => (
-                      <div key={index} className="flex justify-between items-center p-2 bg-accent/10 rounded">
+                      <div key={index} className="flex justify-between gap-3 p-3 rounded-lg bg-accent/10 border border-accent/20">
                         <span className="font-medium">{prize.position}</span>
                         <span className="text-neon-cyan">${prize.amount.toLocaleString()}</span>
                       </div>
@@ -290,7 +295,7 @@ const Dashboard = () => {
                     View Details
                   </Button>
                   <Button variant="neon" size="sm" className="w-full mt-2" onClick={() => navigate(`/team`)}>
-                    Testing 
+                    Testing
                   </Button>
                 </div>
               </div>
@@ -340,7 +345,14 @@ const Dashboard = () => {
             >
               <div className="flex items-center justify-between mb-6">
                 <h2 className="font-orbitron font-bold text-2xl text-foreground">Active Lobbies</h2>
-                <Button variant="ghost" size="sm">View All</Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate('/lobbies')}
+                >
+                  View All
+                </Button>
+
               </div>
               <div className="space-y-4">
                 {activeLobbies.map((lobby, index) => (
@@ -381,13 +393,18 @@ const Dashboard = () => {
                           <div className="font-orbitron font-bold text-neon-cyan mb-2">
                             {lobby.prize}
                           </div>
-                          <Button variant="neon" size="sm">
+                          <Button
+                            onClick={() => navigate(`/lobbies`)}
+                            variant="neon"
+                            size="sm"
+                          >
                             Join Lobby
                           </Button>
+
                         </div>
                       </div>
                       <div className="w-full bg-muted rounded-full h-2">
-                        <div 
+                        <div
                           className="bg-primary h-2 rounded-full"
                           style={{ width: `${(lobby.participants / lobby.maxParticipants) * 100}%` }}
                         />
@@ -419,7 +436,7 @@ const Dashboard = () => {
                         <span className="text-sm text-muted-foreground">{skill.level}%</span>
                       </div>
                       <div className="w-full bg-muted rounded-full h-2">
-                        <motion.div 
+                        <motion.div
                           initial={{ width: 0 }}
                           animate={{ width: `${skill.level}%` }}
                           transition={{ delay: 0.5 + index * 0.1, duration: 0.8 }}
@@ -429,10 +446,10 @@ const Dashboard = () => {
                     </div>
                   ))}
                 </div>
-                <Button variant="ghost" size="sm" className="w-full mt-4">
+                {/* <Button variant="ghost" size="sm" className="w-full mt-4">
                   <TrendingUp className="w-4 h-4 mr-2" />
                   View Detailed Analytics
-                </Button>
+                </Button> */}
               </GlassCard>
             </motion.div>
 
