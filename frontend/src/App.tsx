@@ -14,39 +14,51 @@ import Profile from "./pages/Profile";
 import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import ScrollToTop from './components/layout/scroll-to-top';
 import HackathonPage from './pages/HackathonPage';
 import HackathonDetailsPage from './pages/Hackathon';
 import { userFetchHackathon } from './store/slices/userCurrrentHacthon';
 import TeamAssignment from './pages/TeamAssignment';
 import TeamChat from './pages/TeamChat';
+import Loader from './components/ui/Loader';
 
 
 const AppContent: React.FC = () => {
   const { isAuthenticated, isLoading, dispatch,message } = useAuth();
   const {user} = useUser();
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token && !isAuthenticated) {
-      dispatch(verifyToken());
-    }
-  }, [dispatch, isAuthenticated]);
+  const [isBootstrapping, setIsBootstrapping] = useState(true); // 👈 NEW STATE
 
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+
+    const checkToken = async () => {
+      if (token) {
+        await dispatch(verifyToken());
+      }
+      setTimeout(() => {
+        setIsBootstrapping(false); // 👈 only after token check is done
+      }, 7000);
+
+    };
+
+    checkToken();
+  }, [dispatch]);
 
   useEffect(() => {
     console.log(user);
     if(user && user?.currentHackathonId){
     dispatch(userFetchHackathon(user.currentHackathonId));
     }
-  },[user,user?.currentHackathonId])
-  // if (isLoading) {
-  //   return (
-  //     <div className="min-h-screen bg-background flex items-center justify-center">
-  //       <LoadingSpinner size="lg" />
-  //     </div>
-  //   );
-  // }
+  },[user,user?.currentHackathonId]);
+
+    if (isBootstrapping || isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader />
+      </div>
+    );
+  }
 
   return (
 

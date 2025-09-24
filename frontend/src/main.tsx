@@ -21,7 +21,7 @@ createRoot(document.getElementById('root')!).render(
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <WebSocketManager />
+          {/* <WebSocketManager /> */}
           <App />
         </TooltipProvider>
       </ThemeProvider>
