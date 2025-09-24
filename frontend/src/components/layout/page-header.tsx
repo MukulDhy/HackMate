@@ -21,7 +21,7 @@ export function PageHeader({
 }: PageHeaderProps) {
     const variants = {
         default: 'pt-24 pb-8',
-        hero: 'pt-12 pb-20',
+        hero: 'pb-20',
         minimal: 'pt-20 pb-6',
     };
 
