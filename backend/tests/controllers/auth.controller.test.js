@@ -1,6 +1,6 @@
 // tests/controllers/auth.controller.test.js
 import request from "supertest";
-import app from "../../app";
+import {app} from "../../app";
 import User from "../../models/user.model";
 describe("Auth Controller", () => {
   describe("POST /api/auth/register", () => {

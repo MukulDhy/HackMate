@@ -30,16 +30,16 @@ const defaultUser = {
 };
 
 // Default hackathon data structure
-const defaultHackathon = {
-  title: 'No Active Hackathon',
-  description: 'Join a hackathon to showcase your skills!',
-  startDate: null,
-  endDate: null,
-  status: 'upcoming',
-  totalMembersJoined: 0,
-  maxTeamSize: 0,
-  prizes: []
-};
+// const defaultHackathon = {
+//   title: 'No Active Hackathon',
+//   description: 'Join a hackathon to showcase your skills!',
+//   startDate: null,
+//   endDate: null,
+//   status: 'upcoming',
+//   totalMembersJoined: 0,
+//   maxTeamSize: 0,
+//   prizes: []
+// };
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -61,34 +61,14 @@ const Dashboard = () => {
   }
 
   // Prefer hackathon from Redux, then user, then default
-  const hackathonData = reduxHackathon && Object.keys(reduxHackathon).length > 0
-    ? reduxHackathon
-    : (user.currentHackathonId ? {
-      _id: user.currentHackathonId,
-      title: 'AI Innovation Challenge 2024',
-      description: 'Build the next generation of AI applications',
-      startDate: '2024-03-15',
-      endDate: '2024-03-17',
-      status: 'registration_open',
-      totalMembersJoined: 247,
-      maxTeamSize: 4,
-      prizes: [
-        { position: '1st', amount: 10000 },
-        { position: '2nd', amount: 5000 },
-        { position: '3rd', amount: 2500 }
-      ],
-      registrationDeadline: '2024-03-10',
-      venue: 'Virtual',
-      mode: 'online'
-    } : null);
-  const [currentHackathon, setHackathonData] = useState(hackathonData || defaultHackathon);
+ 
 
   // Keep currentHackathon in sync with redux/user
   useEffect(() => {
     if (hackathonData) {
       setHackathonData(hackathonData);
     } else {
-      setHackathonData(defaultHackathon);
+      setHackathonData(null);
     }
   }, [reduxHackathon, user.currentHackathonId]);
 

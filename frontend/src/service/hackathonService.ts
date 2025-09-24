@@ -3,7 +3,8 @@ import { api } from './api';
 
 // Cache implementation
 const HACKATHON_CACHE_KEY = 'hackathons_cache';
-const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes
+const CACHE_DURATION = 1000; // 1 second
+// const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes
 
 interface CacheData {
   timestamp: number;
@@ -92,7 +93,7 @@ export const hackathonService = {
   async joinHackathon(id : string) : Promise<Hackathon>{
      try {
       const response = await api.post(`/api/hackathons/${id}/join`);
-      return response.data.data;
+      return response.data;
     } catch (error) {
       console.error('API Error:', error);
       throw new Error(error.response?.data?.message || 'Failed to fetch hackathon');

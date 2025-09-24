@@ -184,13 +184,13 @@ export const verifyToken = createAsyncThunk(
       })
       .addCase(registerUser.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.user = action.payload.user || null;
-        state.token = action.payload.token || null;
+        state.user = action.payload.user;
+        state.token = action.payload.token;
         state.isAuthenticated = true;
         state.isTokenVerified = true; // Mark as verified
         state.error = null;
         state.message = null;
-        state.success = action.payload.success || -1;
+        // state.success = action.payload.success || -1;
       })
       .addCase(registerUser.rejected, (state, action) => {
         state.isLoading = false;

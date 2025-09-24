@@ -8,8 +8,8 @@
     "start": "node app.js",
     "dev": "nodemon app.js",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest --passWithNoTests",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch",
+    "test:coverage": "NODE_OPTIONS=--experimental-vm-modules jest --coverage"
   },
   "keywords": [
     "express",
@@ -52,14 +52,5 @@
     "mongodb-memory-server": "^8.12.2",
     "nodemon": "^2.0.22",
     "supertest": "^6.3.3"
-  },
-  "jest": {
-    "testEnvironment": "node",
-    "setupFilesAfterEnv": [
-      "./tests/setup.js"
-    ],
-    "coveragePathIgnorePatterns": [
-      "/node_modules/"
-    ]
   }
 }
