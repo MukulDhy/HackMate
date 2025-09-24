@@ -15,7 +15,7 @@ import {
   Calendar,
   X
 } from 'lucide-react';
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'; // Added useRef
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '@/store/index';
 import { fetchHackathons, setFilters } from '@/store/slices/hackathonSlice';
@@ -66,36 +66,38 @@ export default function Lobbies() {
   const [dateFilter, setDateFilter] = useState<'newest' | 'oldest' | 'soonest' | 'ending_soon'>('newest');
 
   const navigate = useNavigate();
+  const gridRef = useRef<HTMLDivElement>(null); // Fixed: using useRef instead of useCallback
 
   // Memoized filtered hackathons for better performance
   const filteredHackathons = useMemo(() => {
     if (!hackathons.length) return [];
     
     return hackathons
-  .map(hackathon => {
-    const now = new Date();
-    const endDate = new Date(hackathon.endDate);
-    const isEnded = endDate < now;
-    // Return a new object if status needs to be changed
-    if (isEnded && hackathon.status !== 'completed' && hackathon.status !== 'cancelled') {
-      return { ...hackathon, status: 'completed' };
-    }
-    return hackathon;
-  }).sort((a, b) => {
-      // Sort based on date filter
-      switch (dateFilter) {
-        case 'newest':
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-        case 'oldest':
-          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-        case 'soonest':
-          return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
-        case 'ending_soon':
-          return new Date(a.endDate).getTime() - new Date(b.endDate).getTime();
-        default:
-          return 0;
-      }
-    });
+      .map(hackathon => {
+        const now = new Date();
+        const endDate = new Date(hackathon.endDate);
+        const isEnded = endDate < now;
+        // Return a new object if status needs to be changed
+        if (isEnded && hackathon.status !== 'completed' && hackathon.status !== 'cancelled') {
+          return { ...hackathon, status: 'completed' };
+        }
+        return hackathon;
+      })
+      .sort((a, b) => {
+        // Sort based on date filter
+        switch (dateFilter) {
+          case 'newest':
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          case 'oldest':
+            return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          case 'soonest':
+            return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+          case 'ending_soon':
+            return new Date(a.endDate).getTime() - new Date(b.endDate).getTime();
+          default:
+            return 0;
+        }
+      });
   }, [hackathons, dateFilter]);
 
   // Fetch hackathons on component mount and when filters change
@@ -203,6 +205,13 @@ export default function Lobbies() {
   }, []);
 
   const loadMore = useCallback(() => {
+     // Scroll to the grid after a short delay to ensure new content is loaded
+    setTimeout(() => {
+      gridRef.current?.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }, 100);
     dispatch(setFilters({ page: pagination.currentPage + 1 }));
   }, [dispatch, pagination.currentPage]);
 
@@ -324,7 +333,7 @@ export default function Lobbies() {
           </GlassCard>
 
           {/* Categories */}
-          <div className="flex flex-wrap gap-3 mb-8">
+          <div ref={gridRef} className="flex flex-wrap gap-3 mb-8">
             {lobbyCategories.map((category) => (
               <Button
                 key={category.name}

@@ -12,6 +12,7 @@ export const sendResponse = (
     message,
     errorCode,
   });
+  return;
 };
 
 // Standard error codes

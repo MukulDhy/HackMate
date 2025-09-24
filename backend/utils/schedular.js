@@ -363,8 +363,177 @@ const createTeamsForHackathon = async (hackathon, io) => {
   }
 };
 
+// Function to complete hackathon and perform cleanup
+const completeHackathon = async (hackathon, io) => {
+  const session = await mongoose.startSession();
+
+  try {
+    await session.startTransaction();
+
+    const { _id, title, status } = hackathon;
+
+    console.log(`Completing hackathon: ${title}`, {
+      hackathonId: _id,
+      currentStatus: status,
+    });
+
+    // Update hackathon status to completed
+    await Hackathon.findByIdAndUpdate(
+      _id,
+      {
+        $set: {
+          status: "completed",
+          isActive: false,
+          completedAt: new Date(),
+        },
+      },
+      { session }
+    );
+
+    // Find all teams for this hackathon
+    const teams = await Team.find({ hackathonId: _id }).session(session);
+    console.log(
+      `Found ${teams.length} teams to process for hackathon: ${title}`
+    );
+
+    // Update team statuses to completed
+    const teamUpdatePromises = teams.map((team) =>
+      Team.findByIdAndUpdate(
+        team._id,
+        {
+          $set: {
+            status: "completed",
+            completedAt: new Date(),
+          },
+        },
+        { session }
+      )
+    );
+
+    // Clear currentHackathonId for all participants
+    const participantIds = hackathon.participants.map((p) => p._id);
+    const userUpdatePromises = participantIds.map((participantId) =>
+      User.findByIdAndUpdate(
+        participantId,
+        {
+          $unset: { currentHackathonId: "" },
+        },
+        { session }
+      )
+    );
+
+    await Promise.all([...teamUpdatePromises, ...userUpdatePromises]);
+
+    // Commit transaction
+    await session.commitTransaction();
+
+    console.log(`Successfully completed hackathon: ${title}`);
+
+    // Notify clients about hackathon completion
+    // if (io) {
+    //   io.to(_id.toString()).emit("hackathon-completed", {
+    //     hackathonId: _id,
+    //     hackathonTitle: title,
+    //     completedAt: new Date().toISOString(),
+    //     teamsCount: teams.length,
+    //   });
+    // }
+
+    return {
+      success: true,
+      hackathonId: _id,
+      hackathonTitle: title,
+      teamsProcessed: teams.length,
+      participantsProcessed: participantIds.length,
+    };
+  } catch (error) {
+    // Abort transaction on error
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    session.endSession();
+  }
+};
+
+// Function to schedule hackathon completion when it starts
+const scheduleHackathonCompletion = (hackathon, io) => {
+  const { _id, startDate, endDate, title } = hackathon;
+
+  if (!endDate) {
+    logger.warn(
+      `Hackathon ${title} has no end date, cannot schedule completion`
+    );
+    return null;
+  }
+
+  const now = new Date();
+  const endTime = new Date(endDate);
+
+  // If hackathon has already ended, complete it immediately
+  if (endTime <= now) {
+    console.log(`Hackathon ${title} has already ended, completing immediately`);
+    retryOperation(() => completeHackathon(hackathon, io), 3, 500).catch(
+      (error) => {
+        logger.error(
+          `Failed to complete hackathon ${title} immediately:`,
+          error
+        );
+      }
+    );
+    return null;
+  }
+
+  // Calculate delay until hackathon ends
+  const delay = endTime.getTime() - now.getTime();
+
+  console.log(`Scheduling completion for hackathon: ${title}`, {
+    hackathonId: _id,
+    endTime: endTime.toISOString(),
+    delayMs: delay,
+    delayMinutes: Math.round(delay / (1000 * 60)),
+  });
+
+  // Schedule the completion task
+  const timeoutId = setTimeout(async () => {
+    try {
+      // Refresh hackathon data to ensure we have the latest state
+      const currentHackathon = await Hackathon.findById(_id).populate(
+        "participants"
+      );
+
+      if (!currentHackathon) {
+        logger.error(`Hackathon ${_id} not found when trying to complete`);
+        return;
+      }
+
+      if (currentHackathon.status === "completed") {
+        logger.info(`Hackathon ${title} is already completed, skipping`);
+        return;
+      }
+
+      await retryOperation(
+        () => completeHackathon(currentHackathon, io),
+        3,
+        500
+      );
+
+      logger.info(
+        `Successfully completed hackathon via scheduled task: ${title}`
+      );
+    } catch (error) {
+      logger.error(
+        `Failed to complete hackathon ${title} via scheduled task:`,
+        error
+      );
+    }
+  }, delay);
+
+  return timeoutId;
+};
+
 // Main scheduler function with comprehensive error handling
 export const startScheduler = (io) => {
+  // Existing scheduler for team formation (runs every minute)
   cron.schedule(
     "* * * * *",
     async () => {
@@ -376,7 +545,7 @@ export const startScheduler = (io) => {
       };
 
       try {
-        // console.log("Scheduler started at:", marker.timestamp);
+        console.log("Team formation scheduler started at:", marker.timestamp);
         const now = new Date();
         const twoMinutesAgo = new Date(now.getTime() - 2 * 60000);
         const hackathonsToProcess = await Hackathon.find({
@@ -394,7 +563,7 @@ export const startScheduler = (io) => {
 
         marker.hackathonsToProcess = hackathonsToProcess.length;
         logger.info(
-          `Found ${hackathonsToProcess.length} hackathons to process`
+          `Found ${hackathonsToProcess.length} hackathons to process for team formation`
         );
 
         for (const hackathon of hackathonsToProcess) {
@@ -406,7 +575,9 @@ export const startScheduler = (io) => {
           };
 
           try {
-            console.log(`Processing hackathon: ${hackathon.title}`);
+            console.log(
+              `Processing hackathon for team formation: ${hackathon.title}`
+            );
 
             const result = await retryOperation(
               () => createTeamsForHackathon(hackathon, io),
@@ -460,34 +631,18 @@ export const startScheduler = (io) => {
         marker.status = "completed";
         marker.completedAt = new Date().toISOString();
 
-        // Final status report
-        // console.log("Scheduler completed", {
-        //   hackathonsProcessed: marker.hackathonsProcessed,
-        //   totalErrors: marker.errors.length,
-        //   duration: new Date(marker.completedAt) - new Date(marker.timestamp),
-        // });
-
-        // logger.info("Scheduler completed", {
-        //   hackathonsProcessed: marker.hackathonsProcessed,
-        //   errors: marker.errors.length,
-        //   duration: new Date(marker.completedAt) - new Date(marker.timestamp),
-        // });
+        console.log("Team formation scheduler completed", {
+          hackathonsProcessed: marker.hackathonsProcessed,
+          totalErrors: marker.errors.length,
+          duration: new Date(marker.completedAt) - new Date(marker.timestamp),
+        });
       } catch (error) {
         marker.status = "failed";
         marker.error = classifyError(error);
         marker.completedAt = new Date().toISOString();
 
-        logger.error("Scheduler fatal error:", error);
-        console.error("Scheduler fatal error:", error);
-
-        // Emit error event if IO is available
-        // if (io) {
-        //   io.emit("scheduler-error", {
-        //     error: marker.error.message,
-        //     type: marker.error.type,
-        //     timestamp: marker.timestamp,
-        //   });
-        // }
+        logger.error("Team formation scheduler fatal error:", error);
+        console.error("Team formation scheduler fatal error:", error);
       }
     },
     {
@@ -496,8 +651,207 @@ export const startScheduler = (io) => {
     }
   );
 
-  console.log("Hackathon team formation scheduler started");
-  logger.info("Hackathon team formation scheduler started");
+  // New scheduler for hackathon completion (runs every minute to check for started hackathons)
+  cron.schedule(
+    "* * * * *",
+    async () => {
+      const marker = {
+        status: "started",
+        timestamp: new Date().toISOString(),
+        hackathonsScheduled: 0,
+        errors: [],
+      };
+
+      try {
+        console.log(
+          "Hackathon completion scheduler started at:",
+          marker.timestamp
+        );
+        const now = new Date();
+
+        // Find hackathons that have started but not ended and are not completed
+        const activeHackathons = await Hackathon.find({
+          startDate: { $lte: now },
+          endDate: { $gt: now },
+          isActive: true,
+          status: { $in: ["registration_closed", "ongoing"] },
+        }).populate("participants");
+
+        marker.activeHackathons = activeHackathons.length;
+        logger.info(
+          `Found ${activeHackathons.length} active hackathons to check for completion scheduling`
+        );
+
+        // Store scheduled timeouts to avoid duplicate scheduling
+        if (!global.hackathonCompletionTimeouts) {
+          global.hackathonCompletionTimeouts = new Map();
+        }
+
+        for (const hackathon of activeHackathons) {
+          const hackathonMarker = {
+            hackathonId: hackathon._id,
+            title: hackathon.title,
+            status: "checking",
+            startedAt: new Date().toISOString(),
+          };
+
+          try {
+            // Check if completion is already scheduled for this hackathon
+            if (
+              global.hackathonCompletionTimeouts.has(hackathon._id.toString())
+            ) {
+              console.log(
+                `Completion already scheduled for hackathon: ${hackathon.title}`
+              );
+              continue;
+            }
+
+            console.log(
+              `Scheduling completion for hackathon: ${hackathon.title}`
+            );
+
+            // Schedule the completion
+            const timeoutId = scheduleHackathonCompletion(hackathon, io);
+
+            if (timeoutId) {
+              global.hackathonCompletionTimeouts.set(
+                hackathon._id.toString(),
+                timeoutId
+              );
+              hackathonMarker.status = "scheduled";
+              hackathonMarker.timeoutId = timeoutId;
+              marker.hackathonsScheduled++;
+            } else {
+              hackathonMarker.status = "skipped";
+            }
+
+            hackathonMarker.completedAt = new Date().toISOString();
+            console.log(
+              `Successfully scheduled completion for hackathon: ${hackathon.title}`
+            );
+          } catch (error) {
+            hackathonMarker.status = "failed";
+            hackathonMarker.error = {
+              message: error.message,
+              type: error.type,
+              code: error.code,
+            };
+            hackathonMarker.completedAt = new Date().toISOString();
+
+            marker.errors.push(hackathonMarker.error);
+            logger.error(
+              `Error scheduling completion for hackathon ${hackathon.title}:`,
+              error
+            );
+          }
+        }
+
+        marker.status = "completed";
+        marker.completedAt = new Date().toISOString();
+
+        console.log("Hackathon completion scheduler completed", {
+          hackathonsScheduled: marker.hackathonsScheduled,
+          totalErrors: marker.errors.length,
+          duration: new Date(marker.completedAt) - new Date(marker.timestamp),
+        });
+      } catch (error) {
+        marker.status = "failed";
+        marker.error = classifyError(error);
+        marker.completedAt = new Date().toISOString();
+
+        logger.error("Hackathon completion scheduler fatal error:", error);
+        console.error("Hackathon completion scheduler fatal error:", error);
+      }
+    },
+    {
+      scheduled: true,
+      timezone: "UTC",
+    }
+  );
+
+  // Additional scheduler to clean up completed hackathons that might have been missed
+  cron.schedule(
+    "0 */6 * * *", // Run every 6 hours
+    async () => {
+      try {
+        console.log("Cleanup scheduler started");
+        const now = new Date();
+        const oneHourAgo = new Date(now.getTime() - 60 * 60000);
+
+        // Find hackathons that ended more than 1 hour ago but are still active
+        const missedHackathons = await Hackathon.find({
+          endDate: { $lte: oneHourAgo },
+          isActive: true,
+          status: { $ne: "completed" },
+        }).populate("participants");
+
+        logger.info(
+          `Found ${missedHackathons.length} hackathons that need cleanup`
+        );
+
+        for (const hackathon of missedHackathons) {
+          try {
+            console.log(`Cleaning up missed hackathon: ${hackathon.title}`);
+            await retryOperation(
+              () => completeHackathon(hackathon, io),
+              3,
+              500
+            );
+            logger.info(
+              `Successfully cleaned up missed hackathon: ${hackathon.title}`
+            );
+          } catch (error) {
+            logger.error(
+              `Failed to clean up missed hackathon ${hackathon.title}:`,
+              error
+            );
+          }
+        }
+
+        console.log("Cleanup scheduler completed");
+      } catch (error) {
+        logger.error("Cleanup scheduler fatal error:", error);
+      }
+    },
+    {
+      scheduled: true,
+      timezone: "UTC",
+    }
+  );
+
+  console.log(
+    "All hackathon schedulers started (team formation, completion scheduling, and cleanup)"
+  );
+  logger.info("All hackathon schedulers started");
+};
+
+// Function to manually trigger hackathon completion (useful for testing)
+export const manuallyCompleteHackathon = async (hackathonId, io) => {
+  try {
+    const hackathon = await Hackathon.findById(hackathonId).populate(
+      "participants"
+    );
+    if (!hackathon) {
+      throw new Error(`Hackathon ${hackathonId} not found`);
+    }
+
+    const result = await completeHackathon(hackathon, io);
+
+    // Clear any scheduled timeout for this hackathon
+    if (global.hackathonCompletionTimeouts) {
+      const timeoutId = global.hackathonCompletionTimeouts.get(
+        hackathonId.toString()
+      );
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        global.hackathonCompletionTimeouts.delete(hackathonId.toString());
+      }
+    }
+
+    return result;
+  } catch (error) {
+    throw classifyError(error);
+  }
 };
 
 // Export error types and classes for testing

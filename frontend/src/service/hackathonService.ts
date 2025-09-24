@@ -3,7 +3,8 @@ import { api } from './api';
 
 // Cache implementation
 const HACKATHON_CACHE_KEY = 'hackathons_cache';
-const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes
+const CACHE_DURATION = 1000; // 1 second
+// const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes
 
 interface CacheData {
   timestamp: number;

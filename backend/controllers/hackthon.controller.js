@@ -90,12 +90,12 @@ export const getHackathon = async (req, res) => {
       });
     }
 
-    if (!hackathon.isActive) {
-      return res.status(404).json({
-        success: false,
-        message: "Hackathon not available",
-      });
-    }
+    // if (!hackathon.isActive) {
+    //   return res.status(404).json({
+    //     success: false,
+    //     message: "Hackathon not available",
+    //   });
+    // }
 
     res.status(200).json({
       success: true,

@@ -603,6 +603,9 @@ export const verifyingProfile = async (req, res, next) => {
           now > hackathon.endDate
         ) {
           user.currentHackathonId = null;
+          hackathon.isActive = false;
+          hackathon.status = "winner_to_announced";
+          await hackathon.save({ validateBeforeSave: false });
         } else if (
           hackathon.isActive &&
           hackathon.status === "registration_open" &&
@@ -619,6 +622,7 @@ export const verifyingProfile = async (req, res, next) => {
         "Token verification successful",
         ErrorCodes.SUCCESS
       );
+      return;
     }
     sendResponse(
       res,
@@ -628,7 +632,7 @@ export const verifyingProfile = async (req, res, next) => {
       ErrorCodes.SUCCESS
     );
   } catch (error) {
-    throw new UnauthorizedError("Verification Token Failed");
+    next(error);
   }
 };
 
