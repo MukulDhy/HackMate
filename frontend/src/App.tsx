@@ -16,10 +16,10 @@ import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import { useEffect, useState } from "react";
 import ScrollToTop from './components/layout/scroll-to-top';
-import HackathonPage from './pages/HackathonPage';
+
 import HackathonDetailsPage from './pages/Hackathon';
 import { userFetchHackathon } from './store/slices/userCurrrentHacthon';
-import TeamAssignment from './pages/TeamAssignment';
+// import TeamAssignment from './pages/TeamAssignment';
 import TeamChat from './pages/TeamChat';
 import Loader from './components/ui/Loader';
 
