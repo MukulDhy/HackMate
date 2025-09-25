@@ -40,15 +40,15 @@ export const useWebSocket = () => {
     webSocketService.sendTypingIndicator(teamId, isTyping);
   }, []);
 
-  // Mark notifications as read
-  const markNotificationsRead = useCallback((notificationIds) => {
-    webSocketService.markNotificationsRead(notificationIds);
-  }, []);
+  // // Mark notifications as read
+  // const markNotificationsRead = useCallback((notificationIds) => {
+  //   webSocketService.markNotificationsRead(notificationIds);
+  // }, []);
 
-  // Subscribe to hackathon
-  const subscribeToHackathon = useCallback((hackathonId) => {
-    webSocketService.subscribeToHackathon(hackathonId);
-  }, []);
+  // // Subscribe to hackathon
+  // const subscribeToHackathon = useCallback((hackathonId) => {
+  //   webSocketService.subscribeToHackathon(hackathonId);
+  // }, []);
 
   // Clear error
   const clearWebSocketError = useCallback(() => {
@@ -75,8 +75,6 @@ export const useWebSocket = () => {
     disconnect,
     sendTeamMessage,
     sendTypingIndicator,
-    markNotificationsRead,
-    subscribeToHackathon,
     clearWebSocketError,
   };
 };
@@ -99,15 +97,6 @@ export const useNotifications = () => {
   const unreadCount = notifications.filter(n => !n.read).length;
   
   return { notifications, unreadCount };
-};
-
-// Hook for hackathon timer
-export const useHackathonTimer = (hackathonId) => {
-  const timer = useSelector((state) => 
-    state.websocket.hackathonTimers[hackathonId] || {}
-  );
-  
-  return timer;
 };
 
 // Hook for online users

@@ -9,8 +9,6 @@ const initialState = {
   teamMessages: {},
   typingIndicators: {},
   onlineUsers: {},
-  hackathonTimers: {},
-  subscribedHackathons: {},
   lastActivity: null,
 };
 
@@ -100,39 +98,39 @@ const websocketSlice = createSlice({
       state.onlineUsers[teamId][userId] = lastSeen;
       state.lastActivity = new Date().toISOString();
     },
-    hackathonTimer: (state, action) => {
-      const { hackathonId, ...timerData } = action.payload;
-      state.hackathonTimers[hackathonId] = {
-        ...timerData,
-        lastUpdated: new Date().toISOString(),
-      };
-      state.lastActivity = new Date().toISOString();
-    },
-    hackathonSubscribed: (state, action) => {
-      const { hackathonId } = action.payload;
-      state.subscribedHackathons[hackathonId] = true;
-      state.lastActivity = new Date().toISOString();
-    },
-    hackathonStarted: (state, action) => {
-      const { hackathonId, timestamp } = action.payload;
-      if (state.hackathonTimers[hackathonId]) {
-        state.hackathonTimers[hackathonId].status = "running";
-        state.hackathonTimers[hackathonId].hasStarted = true;
-      }
-      state.lastActivity = new Date().toISOString();
-    },
-    hackathonEnded: (state, action) => {
-      const { hackathonId, timestamp } = action.payload;
-      if (state.hackathonTimers[hackathonId]) {
-        state.hackathonTimers[hackathonId].status = "ended";
-        state.hackathonTimers[hackathonId].remainingMs = 0;
-      }
-      state.lastActivity = new Date().toISOString();
-    },
-    teamCreated: (state, action) => {
-      // Handle team created event
-      state.lastActivity = new Date().toISOString();
-    },
+    // hackathonTimer: (state, action) => {
+    //   const { hackathonId, ...timerData } = action.payload;
+    //   state.hackathonTimers[hackathonId] = {
+    //     ...timerData,
+    //     lastUpdated: new Date().toISOString(),
+    //   };
+    //   state.lastActivity = new Date().toISOString();
+    // },
+    // hackathonSubscribed: (state, action) => {
+    //   const { hackathonId } = action.payload;
+    //   state.subscribedHackathons[hackathonId] = true;
+    //   state.lastActivity = new Date().toISOString();
+    // },
+    // hackathonStarted: (state, action) => {
+    //   const { hackathonId, timestamp } = action.payload;
+    //   if (state.hackathonTimers[hackathonId]) {
+    //     state.hackathonTimers[hackathonId].status = "running";
+    //     state.hackathonTimers[hackathonId].hasStarted = true;
+    //   }
+    //   state.lastActivity = new Date().toISOString();
+    // },
+    // hackathonEnded: (state, action) => {
+    //   const { hackathonId, timestamp } = action.payload;
+    //   if (state.hackathonTimers[hackathonId]) {
+    //     state.hackathonTimers[hackathonId].status = "ended";
+    //     state.hackathonTimers[hackathonId].remainingMs = 0;
+    //   }
+    //   state.lastActivity = new Date().toISOString();
+    // },
+    // teamCreated: (state, action) => {
+    //   // Handle team created event
+    //   state.lastActivity = new Date().toISOString();
+    // },
     teamUpdated: (state, action) => {
       // Handle team updated event
       state.lastActivity = new Date().toISOString();
@@ -166,11 +164,11 @@ export const {
   newNotification,
   notificationsRead,
   presenceUpdate,
-  hackathonTimer,
-  hackathonSubscribed,
-  hackathonStarted,
-  hackathonEnded,
-  teamCreated,
+  // hackathonTimer,
+  // hackathonSubscribed,
+  // hackathonStarted,
+  // hackathonEnded,
+  // teamCreated,
   teamUpdated,
   clearMessages,
   changeConnect,
