@@ -33,9 +33,9 @@ export function Navbar() {
     <motion.nav
       initial={{ y: -100 }}
       animate={{ y: 0 }}
-      className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50"
+      className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-border/50"
     >
-      <div className="mx-auto max-w-7xl flex items-center justify-between px-6 py-4">
+      <div className="mx-auto max-w-7xl flex items-center justify-between pt-4">
         {/* Logo */}
         <Link to={user && user.id ? "/dashboard" : "/"} className="flex items-center gap-3 group">
           <HackMateLogoProfessional 
@@ -119,7 +119,7 @@ export function Navbar() {
           exit={{ opacity: 0, y: -20 }}
           className="md:hidden mt-4"
         >
-          <div className="mx-auto max-w-7xl bg-background/95 backdrop-blur-md border border-border/50 rounded-lg p-6 space-y-4">
+          <div className="mx-auto max-w-7xl bg-background/95 backdrop-blur-md border-border/50 rounded-lg p-6 space-y-4">
             {currentNavItems.map((item) => (
               <Link
                 key={item.path}
