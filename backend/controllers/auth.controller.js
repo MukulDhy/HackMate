@@ -396,6 +396,11 @@ export const changePassword = async (req, res, next) => {
 // @desc    Forgot password
 // @route   POST /api/auth/forgot-password
 // @access  Public
+// BODy - {email}
+
+const generateOTP = () => {
+  return Math.floor(100000 + Math.random() * 900000).toString(); // 6 digit
+};
 export const forgotPassword = async (req, res, next) => {
   try {
     const { email } = req.body;
@@ -411,29 +416,53 @@ export const forgotPassword = async (req, res, next) => {
     }
 
     // Generate reset token
-    const resetToken = user.createPasswordResetToken();
-    await user.save({ validateBeforeSave: false });
+    // const resetToken =
+    // await user.save({ validateBeforeSave: false });
 
     // Send reset email
-    const resetURL = `${req.protocol}://${req.get(
-      "host"
-    )}/api/auth/reset-password/${resetToken}`;
+    // const resetURL = `${req.protocol}://${req.get(
+    //   "host"
+    // )}/api/auth/reset-password/${resetToken}`;
+
+    // const message = `
+    //   <h2>Password Reset Request</h2>
+    //   <p>You requested a password reset. Click the link below to reset your password:</p>
+    //   <a href="${resetURL}" style="display: inline-block; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px;">Reset Password</a>
+    //   <p>This link will expire in 10 minutes.</p>
+    //   <p>If you didn't request this, please ignore this email.</p>
+    // `;
+
+    const otpCode = generateOTP();
+    const expiryTime = Date.now() + 10 * 60 * 1000; // 10 minutes
 
     const message = `
-      <h2>Password Reset Request</h2>
-      <p>You requested a password reset. Click the link below to reset your password:</p>
-      <a href="${resetURL}" style="display: inline-block; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px;">Reset Password</a>
-      <p>This link will expire in 10 minutes.</p>
+      <h2>Password Reset OTP</h2>
+      <p>Your OTP for password reset is: <strong>${otpCode}</strong></p>
+      <p>This OTP will expire in 10 minutes.</p>
       <p>If you didn't request this, please ignore this email.</p>
     `;
 
+    // save otp
+    await Otp.create({
+      user: user._id,
+      email,
+      otp: otpCode,
+      otpExpire: expiryTime,
+    });
+
+    // TODO: send OTP via mail/SMS
+    res.json({
+      success: true,
+      message: `Otp send Successfully to your ${email} mail id.`,
+    });
+
     try {
-      // await sendMail({
-      //   from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
-      //   to: user.email,
-      //   subject: "Password Reset Request",
-      //   html: message,
-      // });
+      await sendMail({
+        from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+        to: user.email,
+        subject: "Password Reset Request",
+        html: message,
+      });
 
       sendResponse(
         res,
@@ -461,46 +490,147 @@ export const forgotPassword = async (req, res, next) => {
   }
 };
 
+// @desc    Verify  otp
+// @route   POST /api/auth/verify-otp
+// @access  Public
+// BODy - {email, otp}
+export const verifyOtp = async (req, res, next) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) {
+      throw new ValidationError("Please provide email and OTP");
+    }
+    const otpRecord = await Otp.find
+      .findOne({ email, otp })
+      .sort({ createdAt: -1 }); // Get the latest OTP record
+    if (!otpRecord) {
+      throw new ValidationError("Invalid OTP");
+    }
+    const otpExpire = otpRecord.otpExpire;
+    if (otpExpire < Date.now()) {
+      throw new ValidationError("OTP has expired");
+    }
+    otpRecord.isVerified = true;
+    await otpRecord.save();
+    res.status(200).json({
+      success: true,
+      message: "OTP verified successfully",
+      errorCode: ErrorCodes.SUCCESS,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Reset password
 // @route   PUT /api/auth/reset-password/:token
 // @access  Public
+
+// @desc    Reset password
+// @route   PUT /api/auth/reset-password/
+// @access  Public
+// BODy - {email, otp, newPassword}
+
 export const resetPassword = async (req, res, next) => {
   try {
-    const { token } = req.params;
-    const { password } = req.body;
-
-    if (!password) {
-      throw new ValidationError("Please provide new password");
+    const { email, otp, newPassword } = req.body;
+    if (!email || !otp || !newPassword) {
+      throw new ValidationError("Please provide email, OTP and new password");
     }
-
-    // Hash the token to compare with stored hash
-    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
-
-    const user = await User.findOne({
-      resetPasswordToken: hashedToken,
-      resetPasswordExpires: { $gt: Date.now() },
-    });
-
+    const otpRecord = await Otp.findOne({ email, otp });
+    if (!otpRecord) {
+      throw new ValidationError("Invalid OTP");
+    }
+    if (!otpRecord.isVerified) {
+      throw new ValidationError("OTP not verified");
+    }
+    const otpExpire = otpRecord.otpExpire;
+    if (otpExpire < Date.now()) {
+      throw new ValidationError("OTP has expired");
+    }
+    const user = await User.findOne({ email });
     if (!user) {
-      throw new UnauthorizedError("Invalid or expired reset token");
+      throw new ValidationError("User not found");
+    }
+    await Otp.deleteMany({ email });
+    user.isEmailVerified = true;
+    user.password = newPassword;
+    user.lastLogin = new Date();
+
+    if (user.currentHackathonId) {
+      const hackathon = await Hackathon.findById(user.currentHackathonId);
+      if (!hackathon) {
+        user.currentHackathonId = null;
+        await user.save({ validateBeforeSave: false });
+      } else {
+        const now = new Date();
+        // If hackathon is not active, completed, cancelled, or past end date, clear currentHackathonId
+        if (
+          !hackathon.isActive ||
+          ["completed", "cancelled"].includes(hackathon.status) ||
+          now > hackathon.endDate
+        ) {
+          user.currentHackathonId = null;
+        } else if (
+          hackathon.isActive &&
+          hackathon.status === "registration_open" &&
+          now >= hackathon.registrationDeadline &&
+          now <= hackathon.endDate
+        ) {
+          user.currentHackathonId = hackathon._id;
+        }
+        await user.save({ validateBeforeSave: false });
+      }
     }
 
-    // Set new password
-    user.password = password;
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpires = undefined;
-    await user.save();
-
-    sendTokenResponse(user, 200, res, "Password reset successful");
+    res.status(200).json({
+      success: true,
+      message: "Reset Password successfully",
+      errorCode: ErrorCodes.SUCCESS,
+    });
+    // sendTokenResponse(user, 200, res, "Successfully reset password");
   } catch (error) {
-    if (error.name === "ValidationError") {
-      const messages = Object.values(error.errors).map((err) => err.message);
-      next(new ValidationError(messages.join(", ")));
-    } else {
-      next(error);
-    }
+    next(error);
   }
 };
+
+// export const resetPassword = async (req, res, next) => {
+//   try {
+//     const { token } = req.params;
+//     const { password } = req.body;
+
+//     if (!password) {
+//       throw new ValidationError("Please provide new password");
+//     }
+
+//     // Hash the token to compare with stored hash
+//     const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+//     const user = await User.findOne({
+//       resetPasswordToken: hashedToken,
+//       resetPasswordExpires: { $gt: Date.now() },
+//     });
+
+//     if (!user) {
+//       throw new UnauthorizedError("Invalid or expired reset token");
+//     }
+
+//     // Set new password
+//     user.password = password;
+//     user.resetPasswordToken = undefined;
+//     user.resetPasswordExpires = undefined;
+//     await user.save();
+
+//     sendTokenResponse(user, 200, res, "Password reset successful");
+//   } catch (error) {
+//     if (error.name === "ValidationError") {
+//       const messages = Object.values(error.errors).map((err) => err.message);
+//       next(new ValidationError(messages.join(", ")));
+//     } else {
+//       next(error);
+//     }
+//   }
+// };
 
 // @desc    Send email verification
 // @route   POST /api/auth/send-verification

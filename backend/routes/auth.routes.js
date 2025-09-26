@@ -13,6 +13,7 @@ import {
   logout,
   deactivateAccount,
   verifyingProfile,
+  verifyOtp,
 } from "../controllers/auth.controller.js";
 import { protect } from "../middlewares/auth.js";
 import { validateRegistration, validateLogin } from "../utils/validators.js";
@@ -24,7 +25,9 @@ router.post("/register", validateRegistration, register);
 router.post("/login", validateLogin, login);
 router.post("/google", googleAuth);
 router.post("/forgot-password", forgotPassword);
-router.put("/reset-password/:token", resetPassword);
+router.post("/verify-otp", verifyOtp);
+router.put("/reset-password", resetPassword);
+// router.put("/reset-password/:token", resetPassword);
 
 router.get("/verify-email/:token", verifyEmail);
 // Protected routes (require authentication)
