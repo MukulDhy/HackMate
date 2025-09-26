@@ -567,7 +567,7 @@ export const resetPassword = async (req, res, next) => {
         await user.save({ validateBeforeSave: false });
       }
     }
-
+    await user.save({ validateBeforeSave: false });
     res.status(200).json({
       success: true,
       message: "Reset Password successfully",
