@@ -16,6 +16,7 @@ import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import { useEffect, useState } from "react";
 import ScrollToTop from './components/layout/scroll-to-top';
+import ForgotPassword from './pages/ForgotPassword';
 
 import HackathonDetailsPage from './pages/Hackathon';
 import { userFetchHackathon } from './store/slices/userCurrrentHacthon';
@@ -103,6 +104,7 @@ const AppContent: React.FC = () => {
                     path="/team" 
                     element={<TeamChat></TeamChat>} 
                   />
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
