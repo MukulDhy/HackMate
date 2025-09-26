@@ -66,7 +66,7 @@ const ForgotPasswordPage: React.FC = () => {
     try {
       // Simulate API call
     //   await new Promise(resolve => setTimeout(resolve, 1500));
-    await axios.post(`${API_URL}/auth/forgot-password`, { email: formData.email });
+    await axios.post(`${API_URL}/api/user/forgot-password`, { email: formData.email });
       // Generate and "send" OTP (in real app, this would go to your backend)
       setOtpSent(true);
       setCountdown(120); // 60 seconds countdown
@@ -97,7 +97,7 @@ const ForgotPasswordPage: React.FC = () => {
     try {
       // Simulate OTP verification
     //    await axios.post(`${API_URL}/auth/forgot-password`, { email: formData.email });
-        await axios.post(`${API_URL}/auth/verify-otp`, { email: formData.email, otp: formData.otp });
+        await axios.post(`${API_URL}/api/user/verify-otp`, { email: formData.email, otp: formData.otp });
       
       // In a real app, you'd verify the OTP with your backend
       setSuccess('OTP verified successfully!');
@@ -132,7 +132,7 @@ const ForgotPasswordPage: React.FC = () => {
     try {
       // Simulate password reset API call
     //   await new Promise(resolve => setTimeout(resolve, 2000));
-      await axios.post(`${API_URL}/auth/reset-password`, { 
+      await axios.post(`${API_URL}/api/user/reset-password`, { 
         email: formData.email, 
         otp: formData.otp, 
         newPassword: formData.newPassword 

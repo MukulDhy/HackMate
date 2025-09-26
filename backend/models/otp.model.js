@@ -10,4 +10,6 @@ const otpSchema = new mongoose.Schema({
   otpExpire: { type: Date, required: true }, // manual expire check
 });
 
-export default mongoose.model("Otp", otpSchema);
+const Otp = mongoose.model("Otp", otpSchema);
+
+export default Otp;

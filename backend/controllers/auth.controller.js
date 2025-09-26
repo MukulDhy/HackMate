@@ -6,6 +6,7 @@ dotenv.config({ path: "../config/config.env" });
 import { OAuth2Client } from "google-auth-library";
 import sendMail from "../utils/sendMail.js";
 import { sendResponse, ErrorCodes } from "../utils/responseHandler.js";
+import Otp from "../models/otp.model.js";
 import {
   ValidationError,
   UnauthorizedError,
@@ -443,15 +444,12 @@ export const forgotPassword = async (req, res, next) => {
     try {
       await sendMail({
         from: '"HackMate" <no-reply@hackmate.com>',
-        email: userData.email,
+        email: user.email,
         subject: "Mail from HackMate",
         data,
         template: "forgot_mail.ejs",
       });
     } catch (error) {
-      // Delete the user if email sending fails
-      await User.findByIdAndDelete(user._id);
-      console.error("Email sending failed:", error);
       return next(
         new AppError(
           "Please provide a valid email address.",
@@ -474,36 +472,6 @@ export const forgotPassword = async (req, res, next) => {
       success: true,
       message: `Otp send Successfully to your ${email} mail id.`,
     });
-
-    try {
-      await sendMail({
-        from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
-        to: user.email,
-        subject: "Password Reset Request",
-        html: message,
-      });
-
-      sendResponse(
-        res,
-        200,
-        null,
-        "Password reset email sent",
-        ErrorCodes.SUCCESS
-      );
-    } catch (error) {
-      console.error("Email send error:", error);
-
-      // Clear reset token fields
-      user.resetPasswordToken = undefined;
-      user.resetPasswordExpires = undefined;
-      await user.save({ validateBeforeSave: false });
-
-      throw new AppError(
-        "Email could not be sent",
-        500,
-        ErrorCodes.INTERNAL_SERVER_ERROR
-      );
-    }
   } catch (error) {
     next(error);
   }
@@ -519,9 +487,7 @@ export const verifyOtp = async (req, res, next) => {
     if (!email || !otp) {
       throw new ValidationError("Please provide email and OTP");
     }
-    const otpRecord = await Otp.find
-      .findOne({ email, otp })
-      .sort({ createdAt: -1 }); // Get the latest OTP record
+    const otpRecord = await Otp.findOne({ email, otp }).sort({ createdAt: -1 }); // Get the latest OTP record
     if (!otpRecord) {
       throw new ValidationError("Invalid OTP");
     }
