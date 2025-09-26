@@ -184,7 +184,7 @@ const ForgotPasswordPage: React.FC = () => {
       type="button"
       onClick={onToggle}
       disabled={disabled}
-      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+      className="absolute right-4 top-[52px] transform -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
     >
       {isVisible ? (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -249,7 +249,7 @@ const ForgotPasswordPage: React.FC = () => {
             transition={{ delay: 0.2 }}
             className="text-3xl font-orbitron font-bold mb-2 bg-gradient-primary bg-clip-text text-transparent"
           >
-            HACKFORCE
+            HACKMATE
           </motion.h1>
           <p className="text-muted-foreground">Reset your password securely</p>
         </div>
