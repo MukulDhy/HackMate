@@ -130,7 +130,7 @@ const createTeamsForHackathon = async (hackathon, io) => {
     } = hackathon;
 
     // Validation checks - FIXED: Use participants array directly
-    if (!participants || participants.length === 0) {
+      if (!participants || participants.length === 0) {
       logger.info(`No participants for hackathon: ${title}`);
       return false;
     }

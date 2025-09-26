@@ -87,6 +87,7 @@ class WebSocketService {
         break;
 
       case "team.message":
+        console.log(payload)
         this.store.dispatch({ type: "websocket/teamMessage", payload });
         break;
 
