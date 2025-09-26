@@ -3,6 +3,50 @@
 @tailwind utilities;
 
 /* HackForce Cyberpunk Design System - Glassmorphism + Neon Accents */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #8b5cf6 transparent; /* fallback color */
+}
+
+/* Chrome, Edge, Safari */
+*::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 9999px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #8b5cf6, #6366f1, #3b82f6); /* violet → indigo → blue */
+  border-radius: 9999px;
+  border: 3px solid transparent; /* spacing inside track */
+  background-clip: content-box;
+  min-height: 40px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  filter: brightness(0.9);
+}
+
+/* Hide the top & bottom arrows */
+*::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+/* Dark mode variant */
+@media (prefers-color-scheme: dark) {
+  * {
+    scrollbar-color: #a78bfa transparent; /* lighter violet thumb for firefox */
+  }
+  *::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #c084fc, #818cf8, #60a5fa); /* lighter gradient in dark mode */
+  }
+}
 
 @layer base {
   :root {

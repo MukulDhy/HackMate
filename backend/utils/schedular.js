@@ -528,7 +528,7 @@ export const startScheduler = (io) => {
       };
 
       try {
-        console.log("Team formation scheduler started at:", marker.timestamp);
+        // console.log("Team formation scheduler started at:", marker.timestamp);
         const now = new Date();
         const twoMinutesAgo = new Date(now.getTime() - 2 * 60000);
         // FIXED: Find hackathons where registration deadline has passed
@@ -603,10 +603,10 @@ export const startScheduler = (io) => {
 
         marker.status = "completed";
         marker.completedAt = new Date().toISOString();
-        console.log("Team formation scheduler completed", {
-          hackathonsProcessed: marker.hackathonsProcessed,
-          totalErrors: marker.errors.length,
-        });
+        // console.log("Team formation scheduler completed", {
+        //   hackathonsProcessed: marker.hackathonsProcessed,
+        //   totalErrors: marker.errors.length,
+        // });
       } catch (error) {
         marker.status = "failed";
         marker.error = classifyError(error);
@@ -632,17 +632,17 @@ export const startScheduler = (io) => {
       };
 
       try {
-        console.log(
-          "Hackathon completion scheduler started at:",
-          marker.timestamp
-        );
+        // console.log(
+        //   "Hackathon completion scheduler started at:",
+        //   marker.timestamp
+        // );
         const now = new Date();
+        const threshold = new Date(now.getTime() + 3 * 60 * 1000);
 
-        // FIXED: Find hackathons that should be completed
+        // Find hackathons ending soon
         const hackathonsToComplete = await Hackathon.find({
-          endDate: { $lte: now },
-          startDate: { $lte: now },
-          endDate: { $gt: now },
+          startDate: { $lte: now }, // already started
+          endDate: { $gt: now, $lte: threshold }, // ending in next X minutes
           isActive: true,
           status: {
             $in: ["registration_closed", "ongoing", "winner_to_announced"],
@@ -693,10 +693,10 @@ export const startScheduler = (io) => {
 
         marker.status = "completed";
         marker.completedAt = new Date().toISOString();
-        console.log("Hackathon completion scheduler completed", {
-          hackathonsScheduled: marker.hackathonsScheduled,
-          totalErrors: marker.errors.length,
-        });
+        // console.log("Hackathon completion scheduler completed", {
+        //   hackathonsScheduled: marker.hackathonsScheduled,
+        //   totalErrors: marker.errors.length,
+        // });
       } catch (error) {
         marker.status = "failed";
         marker.error = classifyError(error);
