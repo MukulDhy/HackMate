@@ -23,108 +23,187 @@ import {
   Settings
 } from 'lucide-react';
 import { useState } from 'react';
+import { useUser } from '@/hooks/authHook';
+import { useAppSelector } from '@/hooks/authHook';
+import { Hackathon } from '@/types/hackathon';
 
-const userProfile = {
-  name: 'Alex Rodriguez',
-  username: '@alexdev',
-  title: 'Full Stack Developer & AI Enthusiast',
-  location: 'San Francisco, CA',
-  joinDate: 'Joined January 2023',
-  bio: 'Passionate developer with 5+ years of experience in building scalable web applications. Love working on AI/ML projects and contributing to open source. Always excited to learn new technologies and collaborate with talented teams.',
-  avatar: '/placeholder-avatar.jpg',
-  verified: true,
-  level: 42,
-  xp: 12450,
-  nextLevelXp: 15000,
-  social: {
-    github: 'alexrodriguez',
-    linkedin: 'alex-rodriguez-dev',
-    twitter: 'alexdev_codes'
-  },
-  stats: {
-    hackathonsJoined: 28,
-    teamsFormed: 15,
-    projectsCompleted: 23,
-    winRate: 65,
-    totalPrizes: 125000,
-    rank: 127
-  }
+// Helper function to calculate user stats based on hackathon data
+const calculateUserStats = (user: any, hackathons: Hackathon[]) => {
+  const userHackathons = hackathons.filter(h => 
+    h.participants?.includes(user?._id) || 
+    h.teams?.some(team => team.members.includes(user?._id))
+  );
+  
+  const wonHackathons = userHackathons.filter(h => 
+    h.winners?.some(winner => winner.userId === user?._id)
+  );
+  
+  const teamsFormed = hackathons.reduce((count, h) => {
+    const userTeams = h.teams?.filter(team => team.members.includes(user?._id)) || [];
+    return count + userTeams.length;
+  }, 0);
+
+  const projectsCompleted = hackathons.filter(h => 
+    h.submissions?.some(sub => sub.userId === user?._id || sub.teamId && h.teams?.find(t => t._id === sub.teamId)?.members.includes(user?._id))
+  ).length;
+
+  const winRate = userHackathons.length > 0 ? Math.round((wonHackathons.length / userHackathons.length) * 100) : 0;
+  
+  const totalPrizes = wonHackathons.reduce((total, h) => {
+    const userPrize = h.winners?.find(w => w.userId === user?._id)?.prizeAmount || 0;
+    return total + userPrize;
+  }, 0);
+
+  // Mock rank calculation based on activity
+  const rank = Math.floor(Math.random() * 500) + 1;
+
+  return {
+    hackathonsJoined: userHackathons.length,
+    teamsFormed,
+    projectsCompleted,
+    winRate,
+    totalPrizes,
+    rank
+  };
 };
 
-const skills = [
-  { name: 'React', level: 95, category: 'Frontend', yearsExp: 4 },
-  { name: 'Node.js', level: 88, category: 'Backend', yearsExp: 3 },
-  { name: 'Python', level: 92, category: 'Backend', yearsExp: 5 },
-  { name: 'TypeScript', level: 85, category: 'Language', yearsExp: 3 },
-  { name: 'AWS', level: 78, category: 'Cloud', yearsExp: 2 },
-  { name: 'PostgreSQL', level: 82, category: 'Database', yearsExp: 4 },
-  { name: 'Docker', level: 75, category: 'DevOps', yearsExp: 2 },
-  { name: 'Machine Learning', level: 70, category: 'AI/ML', yearsExp: 2 },
-];
+// Mock achievements based on user activity
+const getUserAchievements = (user: any, stats: any) => {
+  const achievements = [];
 
-const achievements = [
-  {
-    id: 1,
-    title: 'Innovation Master',
-    description: 'Won 5 hackathons in a single year',
-    icon: Trophy,
-    rarity: 'Legendary',
-    date: '2024-01-15',
-    color: 'text-warning'
-  },
-  {
-    id: 2,
-    title: 'Team Player',
-    description: 'Successfully formed 10 teams',
-    icon: Users,
-    rarity: 'Epic',
-    date: '2023-12-20',
-    color: 'text-neon-purple'
-  },
-  {
-    id: 3,
-    title: 'Speed Demon',
-    description: 'Completed challenge in under 2 hours',
-    icon: Clock,
-    rarity: 'Rare',
-    date: '2023-11-30',
-    color: 'text-neon-cyan'
-  },
-  {
-    id: 4,
-    title: 'Skill Master',
-    description: 'Achieved 90%+ in 3+ technologies',
-    icon: Target,
-    rarity: 'Epic',
-    date: '2023-11-15',
-    color: 'text-neon-lime'
-  },
-  {
-    id: 5,
-    title: 'Rising Star',
-    description: 'First hackathon participation',
-    icon: Star,
-    rarity: 'Common',
-    date: '2023-01-10',
-    color: 'text-muted-foreground'
-  },
-  {
-    id: 6,
-    title: 'Mentor',
-    description: 'Helped 5 new developers',
-    icon: Award,
-    rarity: 'Rare',
-    date: '2023-10-05',
-    color: 'text-neon-magenta'
+  if (stats.winRate >= 50) {
+    achievements.push({
+      id: 1,
+      title: 'Consistent Winner',
+      description: `Maintained ${stats.winRate}% win rate`,
+      icon: Trophy,
+      rarity: stats.winRate >= 70 ? 'Legendary' : 'Epic',
+      date: new Date().toISOString().split('T')[0],
+      color: 'text-warning'
+    });
   }
-];
 
-const recentActivity = [
-  { type: 'hackathon_win', title: 'Won AI Innovation Challenge', date: '2 days ago', prize: '$50,000' },
-  { type: 'team_formed', title: 'Formed team "AI Health Innovators"', date: '5 days ago' },
-  { type: 'skill_milestone', title: 'Reached 95% in React', date: '1 week ago' },
-  { type: 'achievement', title: 'Unlocked "Innovation Master" achievement', date: '2 weeks ago' },
-];
+  if (stats.teamsFormed >= 5) {
+    achievements.push({
+      id: 2,
+      title: 'Team Builder',
+      description: `Formed ${stats.teamsFormed} teams`,
+      icon: Users,
+      rarity: stats.teamsFormed >= 10 ? 'Epic' : 'Rare',
+      date: new Date().toISOString().split('T')[0],
+      color: 'text-neon-purple'
+    });
+  }
+
+  if (stats.hackathonsJoined >= 10) {
+    achievements.push({
+      id: 3,
+      title: 'Hackathon Veteran',
+      description: `Joined ${stats.hackathonsJoined} hackathons`,
+      icon: Award,
+      rarity: stats.hackathonsJoined >= 20 ? 'Legendary' : 'Epic',
+      date: new Date().toISOString().split('T')[0],
+      color: 'text-neon-cyan'
+    });
+  }
+
+  if (stats.projectsCompleted >= 5) {
+    achievements.push({
+      id: 4,
+      title: 'Project Master',
+      description: `Completed ${stats.projectsCompleted} projects`,
+      icon: Target,
+      rarity: stats.projectsCompleted >= 15 ? 'Epic' : 'Rare',
+      date: new Date().toISOString().split('T')[0],
+      color: 'text-neon-lime'
+    });
+  }
+
+  if (user?.profileCompletion >= 90) {
+    achievements.push({
+      id: 5,
+      title: 'Profile Perfectionist',
+      description: 'Achieved 90%+ profile completion',
+      icon: Star,
+      rarity: 'Rare',
+      date: new Date().toISOString().split('T')[0],
+      color: 'text-muted-foreground'
+    });
+  }
+
+  // Add a default achievement for new users
+  if (achievements.length === 0) {
+    achievements.push({
+      id: 6,
+      title: 'Rising Star',
+      description: 'Just starting the hackathon journey',
+      icon: Star,
+      rarity: 'Common',
+      date: new Date().toISOString().split('T')[0],
+      color: 'text-neon-magenta'
+    });
+  }
+
+  return achievements;
+};
+
+// Mock recent activity based on user data
+const getRecentActivity = (user: any, stats: any) => {
+  const activities = [];
+
+  if (stats.hackathonsJoined > 0) {
+    activities.push({
+      type: 'hackathon_join',
+      title: `Joined ${stats.hackathonsJoined} hackathon${stats.hackathonsJoined > 1 ? 's' : ''}`,
+      date: 'Recently',
+      prize: stats.totalPrizes > 0 ? `$${stats.totalPrizes.toLocaleString()}` : undefined
+    });
+  }
+
+  if (stats.teamsFormed > 0) {
+    activities.push({
+      type: 'team_formed',
+      title: `Formed ${stats.teamsFormed} team${stats.teamsFormed > 1 ? 's' : ''}`,
+      date: 'Recently'
+    });
+  }
+
+  if (user?.skills?.length > 0) {
+    activities.push({
+      type: 'skill_milestone',
+      title: `Mastered ${user.skills.length} skill${user.skills.length > 1 ? 's' : ''}`,
+      date: 'Recently'
+    });
+  }
+
+  if (user?.lastLogin) {
+    activities.push({
+      type: 'login',
+      title: 'Active on platform',
+      date: `Last login: ${new Date(user.lastLogin).toLocaleDateString()}`
+    });
+  }
+
+  return activities.slice(0, 4); // Return only 4 most recent activities
+};
+
+// Convert user skills to the format needed for the skills section
+const getUserSkills = (user: any) => {
+  if (!user?.skills || user.skills.length === 0) {
+    return [
+      { name: 'JavaScript', level: 75, category: 'Language', yearsExp: 2 },
+      { name: 'React', level: 70, category: 'Frontend', yearsExp: 2 },
+      { name: 'Node.js', level: 65, category: 'Backend', yearsExp: 1 }
+    ];
+  }
+
+  return user.skills.map((skill: string, index: number) => ({
+    name: skill,
+    level: Math.min(100, 60 + Math.floor(Math.random() * 40)), // Random level between 60-100
+    category: ['Frontend', 'Backend', 'Language', 'Tool'][index % 4],
+    yearsExp: 1 + Math.floor(Math.random() * 4)
+  }));
+};
 
 const getRarityColor = (rarity: string) => {
   switch (rarity) {
@@ -137,10 +216,67 @@ const getRarityColor = (rarity: string) => {
 };
 
 export default function Profile() {
+  const { user } = useUser();
+  const hackathons = useAppSelector((state) => state.userHack.hackathons || []);
   const [isEditing, setIsEditing] = useState(false);
-  const [editedProfile, setEditedProfile] = useState(userProfile);
+  const [editedProfile, setEditedProfile] = useState({
+    name: user?.name || '',
+    bio: user?.bio || `Experienced developer passionate about creating innovative solutions.`,
+    title: user?.title || `${user?.role || 'Developer'} & Tech Enthusiast`
+  });
 
-  const xpPercentage = (userProfile.xp / userProfile.nextLevelXp) * 100;
+  if (!user) {
+    return (
+      <div className="min-h-screen animated-bg relative overflow-hidden pt-24">
+        <BackgroundScene className="absolute inset-0 w-full h-full" />
+        <div className="relative max-w-7xl mx-auto p-6 flex items-center justify-center">
+          <GlassCard className="p-8 text-center">
+            <h1 className="text-2xl font-orbitron mb-4">User Not Found</h1>
+            <p>Please log in to view your profile.</p>
+          </GlassCard>
+        </div>
+      </div>
+    );
+  }
+
+  // Calculate user stats based on hackathon participation
+  const userStats = calculateUserStats(user, hackathons);
+  
+  // Get user achievements
+  const achievements = getUserAchievements(user, userStats);
+  
+  // Get recent activity
+  const recentActivity = getRecentActivity(user, userStats);
+  
+  // Get user skills
+  const skills = getUserSkills(user);
+
+  // Calculate level and XP based on activity
+  const baseXp = userStats.hackathonsJoined * 1000 + userStats.projectsCompleted * 500 + userStats.teamsFormed * 300;
+  const userLevel = Math.floor(baseXp / 5000) + 1;
+  const currentLevelXp = baseXp % 5000;
+  const nextLevelXp = 5000;
+  const xpPercentage = (currentLevelXp / nextLevelXp) * 100;
+
+  const userProfile = {
+    name: user.name,
+    username: `@${user.email.split('@')[0]}`,
+    title: editedProfile.title,
+    location: 'San Francisco, CA', // You might want to add this to your user model
+    joinDate: `Joined ${new Date(user.createdAt || Date.now()).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`,
+    bio: editedProfile.bio,
+    avatar: user.profilePicture || '/placeholder-avatar.jpg',
+    verified: user.isEmailVerified,
+    level: userLevel,
+    xp: currentLevelXp,
+    nextLevelXp: nextLevelXp,
+    social: {
+      github: user.socialLinks?.github || 'github-user',
+      linkedin: user.socialLinks?.linkedin || 'linkedin-user',
+      twitter: user.socialLinks?.twitter || 'twitter-user'
+    },
+    stats: userStats
+  };
 
   return (
     <div className="min-h-screen animated-bg relative overflow-hidden pt-24">
@@ -196,7 +332,15 @@ export default function Profile() {
                   <div>
                     <div className="flex items-center gap-3 mb-2">
                       <h1 className="font-orbitron font-bold text-3xl text-foreground">
-                        {userProfile.name}
+                        {isEditing ? (
+                          <Input
+                            value={editedProfile.name}
+                            onChange={(e) => setEditedProfile({...editedProfile, name: e.target.value})}
+                            className="bg-background/50 border-glass-border w-auto"
+                          />
+                        ) : (
+                          userProfile.name
+                        )}
                       </h1>
                       {userProfile.verified && (
                         <Badge variant="default" className="bg-success/20 text-success border-success/30">
@@ -205,7 +349,16 @@ export default function Profile() {
                       )}
                     </div>
                     <p className="text-neon-cyan font-medium mb-2">{userProfile.username}</p>
-                    <p className="text-lg text-muted-foreground mb-3">{userProfile.title}</p>
+                    
+                    {isEditing ? (
+                      <Input
+                        value={editedProfile.title}
+                        onChange={(e) => setEditedProfile({...editedProfile, title: e.target.value})}
+                        className="bg-background/50 border-glass-border mb-3"
+                      />
+                    ) : (
+                      <p className="text-lg text-muted-foreground mb-3">{userProfile.title}</p>
+                    )}
                     
                     <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
                       <span className="flex items-center gap-1">

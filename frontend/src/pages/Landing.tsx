@@ -4,6 +4,7 @@ import { PageHeader } from '@/components/layout/page-header';
 import { PageLayout } from '@/components/layout/page-layout';
 import { Button } from '@/components/ui/button';
 import { GlassCard } from '@/components/ui/glass-card';
+import { useUser } from '@/hooks/authHook';
 import { motion } from 'framer-motion';
 import {
     ArrowRight,
@@ -64,9 +65,10 @@ const testimonials = [
     },
 ];
 
-const partners = ['Google', 'Microsoft', 'Amazon', 'Meta', 'Apple', 'Netflix'];
+const partners = ['Skill', 'Speed', 'Collaboration', 'Innovation', 'Growth', 'Community'];
 
 export default function Landing() {
+    const { user } = useUser();
     return (
         <PageLayout>
             {/* Hero Section */}
@@ -122,7 +124,7 @@ export default function Landing() {
                         transition={{ delay: 1 }}
                         className="flex flex-col sm:flex-row gap-4 justify-center"
                     >
-                        <Link to="/login">
+                        <Link to={user ? "/lobbies" : "/login"}>
                             <Button variant="hero" size="xl" className="group">
                                 Join Hackathon
                                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -230,7 +232,7 @@ export default function Landing() {
                 <ContentSection spacing="lg">
                     <div className="text-center mb-16">
                         <h2 className="font-orbitron font-bold text-4xl md:text-5xl mb-6 text-foreground">
-                            Trusted by Industry Leaders
+                            Why HackMate Stands Out
                         </h2>
                     </div>
 
