@@ -139,10 +139,10 @@ export const register = async (req, res, next) => {
       }
       // Success: send token response
       sendTokenResponse(user, 201, res, "User registered successfully");
-    } catch (emailError) {
+    } catch (error) {
       // Delete the user if email sending fails
       await User.findByIdAndDelete(user._id);
-      console.error("Email sending failed:", emailError);
+      console.error("Email sending failed:", error);
       return next(
         new AppError(
           "Please provide a valid email address.",
@@ -435,12 +435,31 @@ export const forgotPassword = async (req, res, next) => {
     const otpCode = generateOTP();
     const expiryTime = Date.now() + 10 * 60 * 1000; // 10 minutes
 
-    const message = `
-      <h2>Password Reset OTP</h2>
-      <p>Your OTP for password reset is: <strong>${otpCode}</strong></p>
-      <p>This OTP will expire in 10 minutes.</p>
-      <p>If you didn't request this, please ignore this email.</p>
-    `;
+    const data = {
+      otp: otpCode,
+      user: { name: user.name, email: user.email },
+    };
+
+    try {
+      await sendMail({
+        from: '"HackMate" <no-reply@hackmate.com>',
+        email: userData.email,
+        subject: "Mail from HackMate",
+        data,
+        template: "forgot_mail.ejs",
+      });
+    } catch (error) {
+      // Delete the user if email sending fails
+      await User.findByIdAndDelete(user._id);
+      console.error("Email sending failed:", error);
+      return next(
+        new AppError(
+          "Please provide a valid email address.",
+          400,
+          ErrorCodes.VALIDATION_ERROR
+        )
+      );
+    }
 
     // save otp
     await Otp.create({
