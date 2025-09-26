@@ -1,12 +1,12 @@
 // teamSlice.ts
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { teamService, Team, Message as APIMessage } from '../../service/teamService';
-import { useUser } from '../../hooks/authHook';
- // Your user hook
+import { useUser } from '@/hooks/authHook';
+// Removed invalid hook import
 
 // Update interfaces to match backend models
 interface TeamMember {
-  id: string;
+  _id: string;
   name: string;
   role: string;
   status: 'active' | 'away' | 'offline';
@@ -67,7 +67,7 @@ export const fetchUserTeam = createAsyncThunk(
   async ({ userId, hackathonId }: { userId: string; hackathonId: string }, { rejectWithValue }) => {
     try {
       const response = await teamService.getUserTeamByHackathon(userId, hackathonId);
-      return response.data;
+      return { ...response.data, userId };
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Failed to fetch team');
     }
@@ -162,10 +162,10 @@ const teamSlice = createSlice({
         state.isLoading = false;
         state.team = action.payload;
         state.teamName = action.payload.name;
-        
+        state.currentUser = action.payload.userId;
         // Map team members from API response
         state.members = action.payload.teamMember.map((member: any) => ({
-          id: member._id || member.id,
+          _id: member._id || member.id,
           name: member.name,
           role: '', // You might need to adjust this based on your data structure
           status: 'active', // Default status

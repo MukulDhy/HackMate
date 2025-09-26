@@ -27,6 +27,7 @@ import { showWarning } from '@/components/ui/ToasterMsg';
 import { webSocketService } from '@/store';
 import { Hackathon, TeamMember } from '@/types/hackathon';
 import { changeConnect } from '@/store/slices/websocketSlice';
+import { fetchUserTeam } from '@/store/slices/teamSlice';
 
 // Skeleton Loader Components
 const MessageSkeleton = () => (
@@ -78,6 +79,7 @@ export default function TeamChat() {
 
   // WebSocket connection and presence update
   useEffect(() => {
+    // dispatch(setCurrentUser(user._id ? user._id : null));
     const initializeWebSocket = async () => {
       try {
         setIsConnecting(true);
@@ -90,14 +92,14 @@ export default function TeamChat() {
         }
 
         // Send presence update
-        if (teamId && currentUser) {
-          webSocketService.sendMessage({
-            type: "presence.update",
-            userId: currentUser,
-            teamId: teamId,
-            lastSeen: new Date().toISOString()
-          });
-        }
+        // if (teamId && currentUser === user._id) {
+        //   webSocketService.sendMessage({
+        //     type: "presence.update",
+        //     userId: currentUser,
+        //     teamId: teamId,
+        //     lastSeen: new Date().toISOString()
+        //   });
+        // }
 
         // Simulate data loading delay
         setTimeout(() => {
@@ -113,6 +115,7 @@ export default function TeamChat() {
     };
 
     initializeWebSocket();
+    dispatch(fetchUserTeam({ userId: user?._id || '', hackathonId: user?.currentHackathonId || '' }));
 
     // Cleanup on unmount
     return () => {
@@ -433,14 +436,14 @@ export default function TeamChat() {
                   <AnimatePresence>
                     {messages.map((msg, idx) => (
                       <motion.div
-                        key={msg.id || idx}
+                        key={msg._id || idx}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -20 }}
                         className={`flex flex-col ${msg.senderId === currentUser ? 'items-end' : 'items-start'}`}
                       >
                         <div className={`rounded-lg px-3 py-2 max-w-xs sm:max-w-sm md:max-w-md ${msg.senderId === currentUser ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'}`}>
-                          <span className="font-semibold mr-2">{teamMembers.find(m => m.id === msg.senderId)?.name || msg.senderId}</span>
+                          <span className="font-semibold mr-2">{teamMembers.find(m => m._id === msg.senderId)?.name || msg.senderId}</span>
                           {msg.text}
                           {getStatusIcon(msg.status, msg.senderId === currentUser)}
                         </div>
@@ -494,7 +497,7 @@ export default function TeamChat() {
                 <div className="space-y-3">
                   {teamMembers.map((member: TeamMember) => (
                     <motion.div 
-                      key={member.id} 
+                      key={member._id} 
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: 0.1 * teamMembers.indexOf(member) }}
@@ -508,14 +511,14 @@ export default function TeamChat() {
                       <div className="flex-1">
                         <p className="text-foreground font-medium text-sm">
                           {member.name}
-                          {member.name === currentUser && (
+                          {member._id === currentUser && (
                             <span className="text-muted-foreground ml-1">(You)</span>
                           )}
                         </p>
                         <p className="text-muted-foreground text-xs">{member.role}</p>
                       </div>
                       <div className={`w-2 h-2 rounded-full ${
-                        onlineUsers[member.id] ? 'bg-green-500' : 'bg-yellow-500'
+                        onlineUsers[member._id] ? 'bg-green-500' : 'bg-yellow-500'
                       }`}></div>
                     </motion.div>
                   ))}

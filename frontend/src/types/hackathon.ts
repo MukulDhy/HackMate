@@ -100,11 +100,14 @@ export interface HackathonFormData extends Omit<Hackathon, 'registrationDeadline
 
 
 export interface TeamMember {
-  id: number;
+  _id: string;
   name: string;
   role: string;
-  status: string;
+  status: 'active' | 'away' | 'offline';
   avatar: string;
+  email?: string;
+  skills?: string[];
+  experience?: string;
 }
 
 export interface TeamData {
