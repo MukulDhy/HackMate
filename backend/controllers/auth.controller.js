@@ -710,6 +710,7 @@ export const verifyingProfile = async (req, res, next) => {
       const hackathon = await Hackathon.findById(user.currentHackathonId);
       if (!hackathon) {
         user.currentHackathonId = null;
+        await user.save({ validateBeforeSave: false });
       } else {
         const now = new Date();
         if (
