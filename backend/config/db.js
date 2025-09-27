@@ -18,7 +18,11 @@ const connectDB = async () => {
   } catch (error) {
     logger.error(`Error connecting to MongoDB: ${error.message}`);
     console.log(`Error Occured : ${error.message}`.underline.bgRed);
-    process.exit(1);
+    if (process.env.NODE_ENV !== "test") {
+      process.exit(1);
+    } else {
+      throw error; // in test just throw so jest can catch it
+    }
   }
 };
 
