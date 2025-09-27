@@ -10,15 +10,16 @@ interface TeamMembersProps {
   currentUser: string;
   onlineUsers: Record<string, boolean>;
   maxTeamSize: number;
+  teamName: string;
 }
 
-export const TeamMembers = ({ teamMembers, currentUser, onlineUsers, maxTeamSize }: TeamMembersProps) => (
+export const TeamMembers = ({ teamMembers, currentUser, onlineUsers, maxTeamSize, teamName }: TeamMembersProps) => (
   <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>
     <GlassCard className="p-4 xs:p-5 sm:p-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-orbitron font-bold text-lg text-foreground flex items-center gap-2">
           <Users className="w-5 h-5 text-primary" />
-          Team Members
+          Team Members - {teamName}
         </h3>
         <Badge variant="secondary" className="text-xs">
           {teamMembers.length}/{maxTeamSize}

@@ -151,7 +151,7 @@ export const verifyToken = createAsyncThunk(
     // Login
     builder
       .addCase(loginUser.pending, (state) => {
-        state.isLoading = true;
+        // state.isLoading = true;
         state.error = null;
         state.message = null;
       })
@@ -178,7 +178,7 @@ export const verifyToken = createAsyncThunk(
     // Register
     builder
       .addCase(registerUser.pending, (state) => {
-        state.isLoading = true;
+        // state.isLoading = true;
         state.error = null;
         state.message = null;
       })

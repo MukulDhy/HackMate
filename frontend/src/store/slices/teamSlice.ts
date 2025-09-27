@@ -13,6 +13,7 @@ interface TeamMember {
   email?: string;
   skills?: string[];
   experience?: string;
+  teamLoading?: boolean;
 }
 
 interface Message {
@@ -25,6 +26,7 @@ interface Message {
   status: 'sent' | 'delivered' | 'seen';
   createdAt?: string;
   isOptimistic?: boolean;
+  messageLoading?: boolean;
 }
 
 interface TeamState {
@@ -35,9 +37,10 @@ interface TeamState {
   currentUser: string;
   isLoading: boolean;
   error: string | null;
-
-  typingIndicators: string[];
-  onlineUsers: string[];
+  teamLoading: boolean;
+  messageLoading: boolean;
+  typingIndicators: Record<string, string>; // Fixed: changed from string[] to Record
+  onlineUsers: Record<string, string>; // Fixed: changed from string[] to Record
   lastActivity: string | null;
   
   pagination: {
@@ -57,8 +60,10 @@ const initialState: TeamState = {
   currentUser: '',
   isLoading: false,
   error: null,
-  typingIndicators: [],
-  onlineUsers: [],
+  teamLoading: false,
+  messageLoading: false,
+  typingIndicators: {},
+  onlineUsers: {},
   lastActivity: null,
   pagination: {
     currentPage: 1,
@@ -110,6 +115,7 @@ export const sendMessage = createAsyncThunk(
         text: messageData.text,
         messageType: messageData.messageType,
         time: new Date().toISOString(),
+        status: 'sent',
         isOptimistic: true,
       }));
 
@@ -181,9 +187,9 @@ const teamSlice = createSlice({
         const newMessage: Message = {
           id: message._id || message.id,
           teamId: teamId,
-          senderId: message?.sender?._id || '',
+          senderId: message?.sender?._id || message.senderId || '',
           text: message.text,
-          messageType: "text",
+          messageType: message.messageType || "text",
           time: new Date(message.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           status: 'delivered',
           createdAt: message.createdAt,
@@ -221,9 +227,9 @@ const teamSlice = createSlice({
         const member = state.members.find(m => m._id === userId);
         if (member) {
           const lastSeenTime = new Date(lastSeen).getTime();
-          const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+          const oneMinutesAgo = Date.now() - 60000;
           
-          if (lastSeenTime > fiveMinutesAgo) {
+          if (lastSeenTime > oneMinutesAgo) {
             member.status = 'active';
           } else {
             member.status = 'away';
@@ -253,53 +259,70 @@ const teamSlice = createSlice({
         state.isLoading = true;
         state.error = null;
       })
-      .addCase(fetchUserTeam.fulfilled, (state, action) => {
-        state.isLoading = false;
-        state.team = action.payload;
-        state.teamName = action.payload.name;
-        state.currentUser = action.payload.userId;
-        
-        // Map team members from API response
-        state.members = action.payload.teamMember.map((member: any) => ({
-          _id: member._id || member.id,
-          name: member.name,
-          role: member.role || '',
-          status: 'active',
-          avatar: member.avatar || member.name.charAt(0),
-          email: member.email,
-          skills: member.skills,
-          experience: member.experience,
-        }));
-      })
+.addCase(fetchUserTeam.fulfilled, (state, action) => {
+  state.isLoading = false;
+  state.team = action.payload;
+  state.teamName = action.payload.name;
+  state.currentUser = action.payload.userId;
+  // Map team members from API response
+  state.members = action.payload.teamMember.map((member: any) => {
+    const currentTime = new Date().toISOString();
+    const isCurrentUser = member._id === state.currentUser;
+    
+    // Update online status for current user
+    if (isCurrentUser) {
+      state.onlineUsers[member._id] = currentTime;
+    }
+    
+    return {
+      _id: member._id || member.id,
+      name: member.name,
+      role: member.role || '',
+      status: isCurrentUser ? 'active' : 'away',
+      avatar: member.avatar || member.name.charAt(0),
+      email: member.email,
+      skills: member.skills,
+      experience: member.experience
+    };
+  });
+})
       .addCase(fetchUserTeam.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
       })
       // Fetch team messages
       .addCase(fetchTeamMessages.pending, (state) => {
-        state.isLoading = true;
+        state.messageLoading = true; // Fixed: was state.team. = true;
         state.error = null;
       })
       .addCase(fetchTeamMessages.fulfilled, (state, action) => {
-        state.isLoading = false;
+        state.messageLoading = false; // Fixed: was state.isLoading = false;
         const { messages, pagination } = action.payload;
-        
+        console.log(action.payload)
         // Map API messages to local format
         state.messages = messages.map((msg: APIMessage) => ({
           id: msg._id,
           teamId: msg.teamId,
-          senderId: msg.senderId,
+
+          senderId: msg.senderId?._id || msg.senderId || '',
+          
           text: msg.text,
-          messageType: msg.messageType,
+          messageType: msg.messageType || "text",
           time: new Date(msg.createdAt || '').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           status: 'delivered',
           createdAt: msg.createdAt,
         }));
         
-        state.pagination = pagination;
+        state.pagination = {
+          currentPage: pagination.currentPage || pagination.page || 1,
+          totalPages: pagination.totalPages,
+          totalMessages: pagination.totalMessages,
+          hasNextPage: pagination.hasNextPage || false,
+          hasPrevPage: pagination.hasPrevPage || false,
+        };
       })
       .addCase(fetchTeamMessages.rejected, (state, action) => {
-        state.isLoading = false;
+        state.messageLoading = false; // Fixed: was state.isLoading = false;
         state.error = action.payload as string;
       })
       // Send message

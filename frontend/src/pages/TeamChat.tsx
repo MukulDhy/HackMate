@@ -20,7 +20,7 @@ import { useUser } from '@/hooks/authHook';
 import { showWarning } from '@/components/ui/ToasterMsg';
 import { webSocketService } from '@/store';
 import { changeConnect } from '@/store/slices/websocketSlice';
-import { fetchUserTeam } from '@/store/slices/teamSlice';
+import { fetchTeamMessages, fetchUserTeam } from '@/store/slices/teamSlice';
 import { Hackathon } from '@/types/hackathon';
 import { Check, CheckCheck } from 'lucide-react';
 
@@ -34,10 +34,10 @@ export default function TeamChat() {
   const teamMembers = teamData.members || [];
   
   const messages= useAppSelector((state) => state.team.messages);
-  const messagesLoading = false;;
-  const onlineUsers = [];
+  const messagesLoading = useAppSelector((state) => state.team.messageLoading);
+  const onlineUsers = useAppSelector((state) => state.team.onlineUsers);
   const [newMessage, setNewMessage] = useState<string>('');
-  const [timeLeft, setTimeLeft] = useState<string>('23:59:51');
+  const timeLeft = useAppSelector((state) => state?.userHack?.hackathon?.endDate);
   const [isConnecting, setIsConnecting] = useState(true);
   const [isDataLoading, setIsDataLoading] = useState(true);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -72,6 +72,10 @@ export default function TeamChat() {
     initializeWebSocket();
     if (user?._id && user?.currentHackathonId) {
       dispatch(fetchUserTeam({ userId: user._id, hackathonId: user.currentHackathonId }));
+      // dispatch(changeConnect({ changeStatus: true }));
+      if (teamId !== undefined && teamId !== '') {
+        dispatch(fetchTeamMessages({ teamId }));
+      }
     }
 
     return () => {
@@ -149,7 +153,9 @@ export default function TeamChat() {
     // Send message via WebSocket
     webSocketService.sendTeamMessage(teamId, newMessage.trim());
     setNewMessage('');
-    inputRef.current?.focus();
+    // inputRef.current?.focus();
+    // inputRef.current?.scrollIntoView({ behavior: 'smooth' });
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   // Show loading state
@@ -267,6 +273,7 @@ export default function TeamChat() {
               teamMembers={teamMembers}
               currentUser={currentUser}
               onlineUsers={onlineUsers}
+              teamName={teamData.teamName || 'Your Team'}
               maxTeamSize={hackathonData.maxTeamSize}
             />
 

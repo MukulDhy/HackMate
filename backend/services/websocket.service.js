@@ -212,11 +212,13 @@ class WebSocketService {
     if (hackathonId) {
       const team = await Team.findOne({
         hackathonId,
-        "members.userId": userId,
+        teamMember: userId, // Fixed: directly query the array
       });
 
       if (team) {
-        const teamMemberIds = team.members.map((m) => m.userId.toString());
+        const teamMemberIds = team.teamMember.map((id) => id.toString()); // Fixed: use teamMember array
+        if (teamMemberIds.length === 0) return;
+
         this.broadcastToUsers(teamMemberIds, {
           type: "presence.update",
           userId,
