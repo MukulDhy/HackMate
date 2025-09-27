@@ -12,7 +12,7 @@ import { loginWithGoogle } from "../config/firebase";
 import { API_URL } from "../config/API_URL";
 import axios from "axios";
 import { showError, showSuccess } from '@/components/ui/ToasterMsg';
-import { loginUser } from '@/store/slices/authSlice';
+import { googleAuth, loginUser } from '@/store/slices/authSlice';
 import { useAppDispatch, useUser } from '@/hooks/authHook';
 
 function getErrorMessage(errorPayload) {
@@ -117,20 +117,28 @@ useEffect(() => {
       console.log("User Info:", result.user); 
 
       // Send user data to your backend
-      const response = await axios.post(`${API_URL}/api/user/google`, {
-        uid: result.user.uid,
-        email: result.user.email,
-        displayName: result.user.displayName,
-        photoURL: result.user.photoURL
-      }, {
-        headers: { "Content-Type": "application/json" }
-      });
-
+      // const response = await axios.post(`${API_URL}/api/user/google`, {
+      //   uid: result.user.uid,
+      //   email: result.user.email,
+      //   displayName: result.user.displayName,
+      //   photoURL: result.user.photoURL,
+      //   email_verified:true
+      // }, {
+      //   headers: { "Content-Type": "application/json" }
+      // });
+      const resultGoogle = await dispatch(googleAuth({ email: result.user.email, displayName: result.user.displayName, photoURL: result.user.photoURL, email_verified: true }));
       // Store the token from your backend
-      if (response.data.token) {
-        localStorage.setItem('token', response.data.token);
-        showSuccess("Successfully logged in with Google", "Auth", 3000);
+      // if (resultGoogle.data.token) {
+      //   localStorage.setItem('token', resultGoogle.data.token);
+      //   showSuccess("Successfully logged in with Google", "Auth", 3000);
+      //   navigate("/dashboard");
+      // }
+      if (googleAuth.fulfilled.match(resultGoogle)) {
+        showSuccess("Login successful!", "Success", 3000);
         navigate("/dashboard");
+      } else if (googleAuth.rejected.match(resultGoogle)) {
+        const errorPayload = resultGoogle.payload;
+        showError(getErrorMessage(errorPayload), "Error", 6000);
       }
     } catch (error: any) {
       console.error("Google Login Error:", error);
@@ -206,16 +214,16 @@ useEffect(() => {
 
             {/* Social Login */}
             <div className="space-y-3 mb-6">
-              <Button 
+              {/* <Button 
                 variant="ghost" 
                 className="w-full h-12 border border-glass-border hover:bg-primary/10"
                 disabled={isLoading || isGoogleLoading}
               >
                 <Github className="w-5 h-5 mr-3" />
                 Continue with GitHub
-              </Button>
+              </Button> */}
               
-              <GoogleLogin
+              {/* <GoogleLogin
                 onSuccess={handleGoogleSuccess}
                 onError={handleGoogleError}
                 useOneTap
@@ -224,7 +232,7 @@ useEffect(() => {
                 size="large"
                 text="continue_with"
                 locale="en"
-              />
+              /> */}
               
               {/* Alternative Google login button */}
               <Button 

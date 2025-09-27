@@ -232,22 +232,35 @@ export const login = async (req, res, next) => {
 // @desc    Google OAuth login
 // @route   POST /api/auth/google
 // @access  Public
+const generateValidPassword = () => {
+  const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const lowercase = "abcdefghijklmnopqrstuvwxyz";
+  const numbers = "0123456789";
+  const special = "!@#$%^&*()_+-=";
+
+  // Ensure at least one character from each category
+  let password = [
+    uppercase[Math.floor(Math.random() * uppercase.length)],
+    lowercase[Math.floor(Math.random() * lowercase.length)],
+    numbers[Math.floor(Math.random() * numbers.length)],
+    special[Math.floor(Math.random() * special.length)],
+  ].join("");
+
+  // Fill the rest with random characters
+  const allChars = uppercase + lowercase + numbers + special;
+  for (let i = password.length; i < 12; i++) {
+    password += allChars[Math.floor(Math.random() * allChars.length)];
+  }
+
+  // Shuffle the password
+  return password
+    .split("")
+    .sort(() => Math.random() - 0.5)
+    .join("");
+};
 export const googleAuth = async (req, res, next) => {
   try {
-    const { credential } = req.body;
-
-    if (!credential) {
-      throw new ValidationError("Google credential is required");
-    }
-
-    // Verify Google token
-    const ticket = await googleClient.verifyIdToken({
-      idToken: credential,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
-
-    const payload = ticket.getPayload();
-    const { email, name, picture, email_verified } = payload;
+    const { email, displayName, photoURL, email_verified } = req.body;
 
     // Check if user exists
     let user = await User.findOne({ email });
@@ -259,20 +272,20 @@ export const googleAuth = async (req, res, next) => {
         user.isEmailVerified = true;
       }
       if (
-        picture &&
+        photoURL &&
         (!user.profilePicture || user.profilePicture === "default-avatar.png")
       ) {
-        user.profilePicture = picture;
+        user.profilePicture = photoURL;
       }
       await user.save({ validateBeforeSave: false });
     } else {
       // Create new user
       user = await User.create({
-        name,
+        name: displayName,
         email,
-        password: crypto.randomBytes(32).toString("hex"), // Random password for Google users
+        password: generateValidPassword(), // Random password for Google users
         isEmailVerified: email_verified,
-        profilePicture: picture || "default-avatar.png",
+        profilePicture: photoURL || "default-avatar.png",
         lastLogin: new Date(),
       });
     }
@@ -281,6 +294,55 @@ export const googleAuth = async (req, res, next) => {
     next(error);
   }
 };
+// export const googleAuth = async (req, res, next) => {
+//   try {
+//     const { credential } = req.body;
+
+//     if (!credential) {
+//       throw new ValidationError("Google credential is required");
+//     }
+
+//     // Verify Google token
+//     const ticket = await googleClient.verifyIdToken({
+//       idToken: credential,
+//       audience: process.env.GOOGLE_CLIENT_ID,
+//     });
+
+//     const payload = ticket.getPayload();
+//     const { email, name, picture, email_verified } = payload;
+
+//     // Check if user exists
+//     let user = await User.findOne({ email });
+
+//     if (user) {
+//       // Update last login
+//       user.lastLogin = new Date();
+//       if (!user.isEmailVerified && email_verified) {
+//         user.isEmailVerified = true;
+//       }
+//       if (
+//         picture &&
+//         (!user.profilePicture || user.profilePicture === "default-avatar.png")
+//       ) {
+//         user.profilePicture = picture;
+//       }
+//       await user.save({ validateBeforeSave: false });
+//     } else {
+//       // Create new user
+//       user = await User.create({
+//         name,
+//         email,
+//         password: crypto.randomBytes(32).toString("hex"), // Random password for Google users
+//         isEmailVerified: email_verified,
+//         profilePicture: picture || "default-avatar.png",
+//         lastLogin: new Date(),
+//       });
+//     }
+//     sendTokenResponse(user, 200, res, "Google authentication successful");
+//   } catch (error) {
+//     next(error);
+//   }
+// };
 
 // @desc    Get current user
 // @route   GET /api/auth/me
