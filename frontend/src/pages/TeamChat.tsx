@@ -37,7 +37,7 @@ export default function TeamChat() {
   const messagesLoading = useAppSelector((state) => state.team.messageLoading);
   const onlineUsers = useAppSelector((state) => state.team.onlineUsers);
   const [newMessage, setNewMessage] = useState<string>('');
-  const [timeLeft, setTimeLeft] = useState<string>('23:59:51');
+  const timeLeft = useAppSelector((state) => state?.userHack?.hackathon?.endDate);
   const [isConnecting, setIsConnecting] = useState(true);
   const [isDataLoading, setIsDataLoading] = useState(true);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -273,6 +273,7 @@ export default function TeamChat() {
               teamMembers={teamMembers}
               currentUser={currentUser}
               onlineUsers={onlineUsers}
+              teamName={teamData.teamName || 'Your Team'}
               maxTeamSize={hackathonData.maxTeamSize}
             />
 
