@@ -94,6 +94,7 @@ export const TeamChatMessages = ({
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -20 }}
                       className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
+                      ref={idx === messages.length - 1 ? chatEndRef : null}
                     >
                       <div className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'} max-w-xs sm:max-w-sm md:max-w-md`}>
                         {/* Sender Name */}
@@ -167,7 +168,7 @@ export const TeamChatMessages = ({
                 })
               )}
             </AnimatePresence>
-            <div ref={chatEndRef} />
+            {/* <div ref={chatEndRef} /> */}
           </div>
         )}
         
