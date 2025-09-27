@@ -522,6 +522,10 @@ export const resetPassword = async (req, res, next) => {
     if (!email || !otp || !newPassword) {
       throw new ValidationError("Please provide email, OTP and new password");
     }
+    // Prevent NoSQL injection by verifying email is a string
+    if (typeof email !== "string") {
+      throw new ValidationError("Email must be a string");
+    }
     const otpRecord = await Otp.findOne({ email, otp });
     if (!otpRecord) {
       throw new ValidationError("Invalid OTP");
