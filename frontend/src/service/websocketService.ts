@@ -87,8 +87,7 @@ class WebSocketService {
         break;
 
       case "team.message":
-        console.log(payload)
-        this.store.dispatch({ type: "websocket/teamMessage", payload });
+        this.store.dispatch({ type: "team/webSocketTeamMessageReceived", payload });
         break;
 
       case "team.typing":
@@ -108,7 +107,7 @@ class WebSocketService {
         break;
 
       case "presence.update":
-        this.store.dispatch({ type: "websocket/presenceUpdate", payload });
+        this.store.dispatch({ type: "team/webSocketPresenceUpdateReceived", payload });
         break;
 
       case "hackathon.timer":

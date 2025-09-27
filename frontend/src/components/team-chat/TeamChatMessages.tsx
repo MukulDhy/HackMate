@@ -6,6 +6,7 @@ import { MessageSquare, Send, Check, CheckCheck } from 'lucide-react';
 import { Message, TeamMember } from '@/types/hackathon';
 import { RefObject } from 'react';
 import { webSocketService } from '@/store';
+
 interface TeamChatMessagesProps {
   messages: Message[];
   messagesLoading: boolean;
@@ -33,18 +34,23 @@ export const TeamChatMessages = ({
   inputRef,
   chatEndRef
 }: TeamChatMessagesProps) => {
+  // Get sender info with fallback
+  const getSenderInfo = (senderId: string) => {
+    const member = teamMembers.find(m => m._id === senderId);
+    return {
+      name: member?.name || 'Unknown User',
+      initial: (member?.name?.charAt(0) || 'U').toUpperCase()
+    };
+  };
+
+  // Check if we should show sender name (not current user and different from previous message)
+  const shouldShowSender = (currentMsg: Message, previousMsg: Message | undefined) => {
+    if (currentMsg.senderId === currentUser) return false;
+    if (!previousMsg) return true;
+    return currentMsg.senderId !== previousMsg.senderId;
+  };
 
 
-
-  console.log("Rendering TeamChatMessages with messages:", messages);
-  console.log("Current user:", currentUser);
-  console.log("WebSocket connected:", webSocketService?.isConnected);
-  console.log("Messages loading:", messagesLoading);
-  console.log("Team members:", teamMembers);
-  console.log("New message:", newMessage);
-  console.log("Input ref:", inputRef.current);
-  console.log("Chat end ref:", chatEndRef.current);
-  console.log("WebSocket service:", webSocketService);
   return (
     <motion.div 
       initial={{ opacity: 0, x: -20 }} 
@@ -68,41 +74,97 @@ export const TeamChatMessages = ({
             <div className="text-muted-foreground">Loading messages...</div>
           </div>
         ) : (
-          <div className="h-80 xs:h-96 overflow-y-auto space-y-3 mb-4 custom-scrollbar">
+          <div className="h-80 xs:h-96 overflow-y-auto space-y-1 mb-4 custom-scrollbar">
             <AnimatePresence>
               {messages.length === 0 ? (
                 <div className="h-full flex items-center justify-center text-muted-foreground">
                   No messages yet. Start the conversation!
                 </div>
               ) : (
-                messages.map((msg, idx) => (
-                  <motion.div
-                    key={msg._id || idx}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    className={`flex flex-col ${msg.senderId === currentUser ? 'items-end' : 'items-start'}`}
-                  >
-                    <div className={`rounded-lg px-3 py-2 max-w-xs sm:max-w-sm md:max-w-md ${
-                      msg.senderId === currentUser 
-                        ? 'bg-primary text-primary-foreground' 
-                        : 'bg-muted text-foreground'
-                    }`}>
-                      {/* Show sender name only for others' messages */}
-                      {msg.senderId !== currentUser && (
-                        <span className="font-semibold mr-2">
-                          {teamMembers.find(m => m._id === msg.senderId)?.name || 'Unknown User'}
-                        </span>
-                      )}
-                      {msg.text}
-                      {/* Show status icon only for current user's messages */}
-                      {msg.senderId === currentUser && getStatusIcon(msg.status, true)}
-                    </div>
-                    <span className="text-xs text-muted-foreground mt-1">
-                      {formatDate(msg.createdAt || msg.time)}
-                    </span>
-                  </motion.div>
-                ))
+                messages.map((msg, idx) => {
+                  const previousMsg = idx > 0 ? messages[idx - 1] : undefined;
+                  const showSender = shouldShowSender(msg, previousMsg);
+                  const senderInfo = getSenderInfo(msg.senderId);
+                  const isOwnMessage = msg.senderId === currentUser;
+
+                  return (
+                    <motion.div
+                      key={msg._id || idx}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'} max-w-xs sm:max-w-sm md:max-w-md`}>
+                        {/* Sender Name */}
+                        {showSender && !isOwnMessage && (
+                          <motion.div
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            className="flex items-center gap-2 mb-1 ml-3"
+                          >
+                            {/* Avatar circle with initial */}
+                            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-xs font-bold text-white shadow-sm">
+                              {senderInfo.initial}
+                            </div>
+                            <span className="font-semibold text-sm text-foreground/80">
+                              {senderInfo.name}
+                            </span>
+                          </motion.div>
+                        )}
+
+                        {/* Message Bubble with flexible layout */}
+                        <div className="flex items-end gap-2">
+                          {/* Connection line for others' messages */}
+                          {!isOwnMessage && (
+                            <div className="w-6 flex justify-center">
+                              <div className="w-0.5 h-6 bg-gradient-to-b from-blue-400/50 to-transparent"></div>
+                            </div>
+                          )}
+                          
+                          {/* Flexible message container */}
+                          <div className={`relative max-w-full ${
+                            isOwnMessage 
+                              ? 'bg-primary text-primary-foreground rounded-lg rounded-br-none' 
+                              : 'bg-muted text-foreground rounded-lg rounded-bl-none'
+                          }`}>
+                            <div className="px-3 py-2 break-words min-w-0">
+                              {msg.text}
+                            </div>
+                            
+                            {/* Status icon for own messages - positioned inline with text */}
+                            {isOwnMessage && (
+                              <div className="absolute bottom-1 right-1 flex items-center">
+                                {getStatusIcon(msg.status, true)}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Connection line for own messages */}
+                          {isOwnMessage && (
+                            <div className="w-6 flex justify-center">
+                              <div className="w-0.5 h-6 bg-gradient-to-b from-primary/50 to-transparent"></div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Timestamp */}
+                        <div className={`flex items-center gap-2 mt-1 ${
+                          isOwnMessage ? 'flex-row-reverse' : 'flex-row'
+                        }`}>
+                          <span className="text-xs text-muted-foreground">
+                            {formatDate(msg.createdAt || msg.time)}
+                          </span>
+                          
+                          {/* Small indicator for consecutive messages from same sender */}
+                          {!showSender && !isOwnMessage && (
+                            <div className="w-1 h-1 rounded-full bg-muted-foreground/30"></div>
+                          )}
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })
               )}
             </AnimatePresence>
             <div ref={chatEndRef} />

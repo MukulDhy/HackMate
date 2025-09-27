@@ -48,7 +48,7 @@ const AppContent: React.FC = () => {
   }, [dispatch]);
 
   useEffect(() => {
-    console.log(user);
+
     if(user && user?.currentHackathonId){
     dispatch(userFetchHackathon(user.currentHackathonId));
     }

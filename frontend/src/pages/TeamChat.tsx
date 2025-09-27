@@ -15,13 +15,14 @@ import {
 import { motion } from 'framer-motion';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAppSelector, useAppDispatch } from '@/hooks/redux-hooks';
-import { useTeamMessages, useOnlineUsers } from '@/hooks/websocketHooks';
+// import { useTeamMessages, useOnlineUsers } from '@/hooks/websocketHooks';
 import { useUser } from '@/hooks/authHook';
 import { showWarning } from '@/components/ui/ToasterMsg';
 import { webSocketService } from '@/store';
 import { changeConnect } from '@/store/slices/websocketSlice';
 import { fetchUserTeam } from '@/store/slices/teamSlice';
 import { Hackathon } from '@/types/hackathon';
+import { Check, CheckCheck } from 'lucide-react';
 
 export default function TeamChat() {
   const dispatch = useAppDispatch();
@@ -32,8 +33,9 @@ export default function TeamChat() {
   const teamId = teamData.team?._id || '';
   const teamMembers = teamData.members || [];
   
-  const { messages, isLoading: messagesLoading } = useTeamMessages(teamId);
-  const onlineUsers = useOnlineUsers(teamId);
+  const messages= useAppSelector((state) => state.team.messages);
+  const messagesLoading = false;;
+  const onlineUsers = [];
   const [newMessage, setNewMessage] = useState<string>('');
   const [timeLeft, setTimeLeft] = useState<string>('23:59:51');
   const [isConnecting, setIsConnecting] = useState(true);

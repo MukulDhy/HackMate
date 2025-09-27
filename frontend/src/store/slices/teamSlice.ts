@@ -1,10 +1,9 @@
-// teamSlice.ts
+// teamSlice.js
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { teamService, Team, Message as APIMessage } from '../../service/teamService';
-import { useUser } from '@/hooks/authHook';
-// Removed invalid hook import
+import { webSocketService } from "../index";
 
-// Update interfaces to match backend models
+// Interfaces
 interface TeamMember {
   _id: string;
   name: string;
@@ -25,6 +24,7 @@ interface Message {
   time: string;
   status: 'sent' | 'delivered' | 'seen';
   createdAt?: string;
+  isOptimistic?: boolean;
 }
 
 interface TeamState {
@@ -35,6 +35,11 @@ interface TeamState {
   currentUser: string;
   isLoading: boolean;
   error: string | null;
+
+  typingIndicators: string[];
+  onlineUsers: string[];
+  lastActivity: string | null;
+  
   pagination: {
     currentPage: number;
     totalPages: number;
@@ -52,6 +57,9 @@ const initialState: TeamState = {
   currentUser: '',
   isLoading: false,
   error: null,
+  typingIndicators: [],
+  onlineUsers: [],
+  lastActivity: null,
   pagination: {
     currentPage: 1,
     totalPages: 0,
@@ -88,17 +96,44 @@ export const fetchTeamMessages = createAsyncThunk(
 
 export const sendMessage = createAsyncThunk(
   'team/sendMessage',
-  async (messageData: { teamId: string; text: string; messageType?: string }, { getState, rejectWithValue }) => {
+  async (messageData: { teamId: string; text: string; messageType?: string }, { getState, rejectWithValue, dispatch }) => {
     try {
       const state = getState() as { team: TeamState };
       const senderId = state.team.currentUser;
       
-      const response = await teamService.sendMessage({
-        ...messageData,
+      // Add optimistic message first
+      const tempMessageId = `temp-${Date.now()}`;
+      dispatch(addOptimisticMessage({
+        id: tempMessageId,
+        teamId: messageData.teamId,
         senderId,
-      });
-      
-      return response.data;
+        text: messageData.text,
+        messageType: messageData.messageType,
+        time: new Date().toISOString(),
+        isOptimistic: true,
+      }));
+
+      if (webSocketService.isConnected) {
+        webSocketService.sendTeamMessage(messageData.teamId, messageData.text, messageData.messageType);
+        
+        // Return the optimistic message data for immediate update
+        return {
+          _id: tempMessageId,
+          teamId: messageData.teamId,
+          senderId,
+          text: messageData.text,
+          messageType: messageData.messageType,
+          createdAt: new Date().toISOString(),
+          isOptimistic: true,
+        };
+      } else {
+        // Fallback to REST API
+        const response = await teamService.sendMessage({
+          ...messageData,
+          senderId,
+        });
+        return response.data;
+      }
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Failed to send message');
     }
@@ -115,19 +150,10 @@ const teamSlice = createSlice({
     addMember: (state, action: PayloadAction<TeamMember>) => {
       state.members.push(action.payload);
     },
-    addLocalMessage: (state, action: PayloadAction<Omit<Message, 'id' | 'status'>>) => {
-      const newMessage: Message = {
-        ...action.payload,
-        id: `temp-${Date.now()}`, // Temporary ID for optimistic UI update
-        status: 'sent',
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      };
-      state.messages.push(newMessage);
+    addOptimisticMessage: (state, action: PayloadAction<Message>) => {
+      state.messages.push(action.payload);
     },
-    updateMessageStatus: (
-      state,
-      action: PayloadAction<{ id: string; status: 'sent' | 'delivered' | 'seen' }>
-    ) => {
+    updateMessageStatus: (state, action: PayloadAction<{ id: string; status: 'sent' | 'delivered' | 'seen' }>) => {
       const { id, status } = action.payload;
       const message = state.messages.find(m => m.id === id);
       if (message) {
@@ -140,16 +166,85 @@ const teamSlice = createSlice({
     clearMessages: (state) => {
       state.messages = [];
     },
-    updateMemberStatus: (
-      state,
-      action: PayloadAction<{ id: string; status: 'active' | 'away' | 'offline' }>
-    ) => {
+    updateMemberStatus: (state, action: PayloadAction<{ id: string; status: 'active' | 'away' | 'offline' }>) => {
       const { id, status } = action.payload;
-      const member = state.members.find(m => m.id === id);
+      const member = state.members.find(m => m._id === id);
       if (member) {
         member.status = status;
       }
     },
+    
+    webSocketTeamMessageReceived: (state, action: PayloadAction<any>) => {
+      const { teamId, message } = action.payload;
+     
+      if (state.team && state.team._id === teamId) {
+        const newMessage: Message = {
+          id: message._id || message.id,
+          teamId: teamId,
+          senderId: message?.sender?._id || '',
+          text: message.text,
+          messageType: "text",
+          time: new Date(message.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          status: 'delivered',
+          createdAt: message.createdAt,
+        };
+
+        // Replace optimistic message or add new one
+        const optimisticIndex = state.messages.findIndex(m => m.isOptimistic && m.text === message.text);
+        if (optimisticIndex !== -1) {
+          state.messages[optimisticIndex] = newMessage;
+        } else {
+          state.messages.push(newMessage);
+        }
+      }
+      state.lastActivity = new Date().toISOString();
+    },
+    webSocketTypingIndicatorReceived: (state, action: PayloadAction<any>) => {
+      const { teamId, userId, isTyping, timestamp } = action.payload;
+      
+      if (state.team && state.team._id === teamId) {
+        if (isTyping) {
+          state.typingIndicators[userId] = timestamp;
+        } else {
+          delete state.typingIndicators[userId];
+        }
+      }
+      state.lastActivity = new Date().toISOString();
+    },
+    webSocketPresenceUpdateReceived: (state, action: PayloadAction<any>) => {
+      const { userId, lastSeen, teamId } = action.payload;
+      
+      if (state.team && state.team._id === teamId) {
+        state.onlineUsers[userId] = lastSeen;
+        
+        // Update member status based on last seen
+        const member = state.members.find(m => m._id === userId);
+        if (member) {
+          const lastSeenTime = new Date(lastSeen).getTime();
+          const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+          
+          if (lastSeenTime > fiveMinutesAgo) {
+            member.status = 'active';
+          } else {
+            member.status = 'away';
+          }
+        }
+      }
+      state.lastActivity = new Date().toISOString();
+    },
+    webSocketTeamUpdated: (state, action: PayloadAction<any>) => {
+      // Handle team updates from WebSocket
+      if (state.team && state.team._id === action.payload.teamId) {
+        state.team = { ...state.team, ...action.payload.teamData };
+        state.teamName = action.payload.teamData.name || state.teamName;
+      }
+      state.lastActivity = new Date().toISOString();
+    },
+    sendTypingIndicator: (state, action: PayloadAction<{ teamId: string; isTyping: boolean }>) => {
+      if (webSocketService.isConnected) {
+        webSocketService.sendTypingIndicator(action.payload.teamId, action.payload.isTyping);
+      }
+    }
   },
   extraReducers: (builder) => {
     builder
@@ -163,12 +258,13 @@ const teamSlice = createSlice({
         state.team = action.payload;
         state.teamName = action.payload.name;
         state.currentUser = action.payload.userId;
+        
         // Map team members from API response
         state.members = action.payload.teamMember.map((member: any) => ({
           _id: member._id || member.id,
           name: member.name,
-          role: '', // You might need to adjust this based on your data structure
-          status: 'active', // Default status
+          role: member.role || '',
+          status: 'active',
           avatar: member.avatar || member.name.charAt(0),
           email: member.email,
           skills: member.skills,
@@ -196,7 +292,7 @@ const teamSlice = createSlice({
           text: msg.text,
           messageType: msg.messageType,
           time: new Date(msg.createdAt || '').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          status: 'delivered', // Assuming messages from server are delivered
+          status: 'delivered',
           createdAt: msg.createdAt,
         }));
         
@@ -208,38 +304,33 @@ const teamSlice = createSlice({
       })
       // Send message
       .addCase(sendMessage.fulfilled, (state, action) => {
-        // Replace temporary message with the one from server
-        const newMessage = action.payload;
-        const index = state.messages.findIndex(m => m.id.startsWith('temp-'));
-        
-        if (index !== -1) {
-          state.messages[index] = {
-            id: newMessage._id,
-            teamId: newMessage.teamId,
-            senderId: newMessage.senderId,
-            text: newMessage.text,
-            messageType: newMessage.messageType,
-            time: new Date(newMessage.createdAt || '').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            status: 'delivered',
-            createdAt: newMessage.createdAt,
-          };
-        } else {
-          // If no temporary message found, add the new one
-          state.messages.push({
-            id: newMessage._id,
-            teamId: newMessage.teamId,
-            senderId: newMessage.senderId,
-            text: newMessage.text,
-            messageType: newMessage.messageType,
-            time: new Date(newMessage.createdAt || '').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            status: 'delivered',
-            createdAt: newMessage.createdAt,
-          });
+        // If message was sent via REST API (not WebSocket), update it
+        if (!action.payload.isOptimistic) {
+          const newMessage = action.payload;
+          const index = state.messages.findIndex(m => m.id.startsWith('temp-'));
+          
+          if (index !== -1) {
+            state.messages[index] = {
+              id: newMessage._id,
+              teamId: newMessage.teamId,
+              senderId: newMessage.senderId,
+              text: newMessage.text,
+              messageType: newMessage.messageType,
+              time: new Date(newMessage.createdAt || '').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              status: 'delivered',
+              createdAt: newMessage.createdAt,
+            };
+          }
         }
+        // If message was sent via WebSocket, it will be handled by webSocketTeamMessageReceived
       })
       .addCase(sendMessage.rejected, (state, action) => {
         state.error = action.payload as string;
-        // You might want to mark the temporary message as failed
+        // Mark optimistic message as failed
+        const failedMessage = state.messages.find(m => m.isOptimistic);
+        if (failedMessage) {
+          failedMessage.status = 'sent'; // Or create a 'failed' status
+        }
       });
   },
 });
@@ -247,11 +338,16 @@ const teamSlice = createSlice({
 export const {
   setMembers,
   addMember,
-  addLocalMessage,
+  addOptimisticMessage,
   updateMessageStatus,
   setCurrentUser,
   clearMessages,
   updateMemberStatus,
+  webSocketTeamMessageReceived,
+  webSocketTypingIndicatorReceived,
+  webSocketPresenceUpdateReceived,
+  webSocketTeamUpdated,
+  sendTypingIndicator,
 } = teamSlice.actions;
 
 export default teamSlice.reducer;

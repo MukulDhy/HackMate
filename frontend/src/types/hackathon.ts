@@ -110,14 +110,20 @@ export interface TeamMember {
   experience?: string;
 }
 
+export interface Message {
+  id: string;
+  teamId: string;
+  senderId: string;
+  text: string;
+  messageType?: string;
+  time: string;
+  status: 'sent' | 'delivered' | 'seen';
+  createdAt?: string;
+  isOptimistic?: boolean;
+}
+
 export interface TeamData {
   members: TeamMember[];
   currentUser: string;
 }
 
-export interface Message {
-  sender: string;
-  text: string;
-  time: string;
-  status: 'sent' | 'delivered' | 'seen';
-}
