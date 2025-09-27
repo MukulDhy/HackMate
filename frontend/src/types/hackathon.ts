@@ -100,11 +100,26 @@ export interface HackathonFormData extends Omit<Hackathon, 'registrationDeadline
 
 
 export interface TeamMember {
-  id: number;
+  _id: string;
   name: string;
   role: string;
-  status: string;
+  status: 'active' | 'away' | 'offline';
   avatar: string;
+  email?: string;
+  skills?: string[];
+  experience?: string;
+}
+
+export interface Message {
+  id: string;
+  teamId: string;
+  senderId: string;
+  text: string;
+  messageType?: string;
+  time: string;
+  status: 'sent' | 'delivered' | 'seen';
+  createdAt?: string;
+  isOptimistic?: boolean;
 }
 
 export interface TeamData {
@@ -112,9 +127,3 @@ export interface TeamData {
   currentUser: string;
 }
 
-export interface Message {
-  sender: string;
-  text: string;
-  time: string;
-  status: 'sent' | 'delivered' | 'seen';
-}

@@ -10,7 +10,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Provider } from 'react-redux';
 import { store } from './store';
-import WebSocketManager from '@/context/WebSocketManager.tsx';
+// import WebSocketManager from '@/context/WebSocketManager.tsx';
 
 const queryClient = new QueryClient();
 

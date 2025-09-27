@@ -65,7 +65,7 @@ messageSchema.statics.getTeamMessages = function (
   const skip = (page - 1) * limit;
 
   return this.find({ teamId })
-    .populate("senderId", "name profilePicture")
+    .populate("senderId", "name email profilePicture")
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit)
