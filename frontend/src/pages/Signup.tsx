@@ -7,10 +7,39 @@ import { Label } from '@/components/ui/label';
 import { GlassCard } from '@/components/ui/glass-card';
 import { BackgroundScene } from '@/components/3d/background-scene';
 import { Eye, EyeOff, Mail, Lock, User, Github, Chrome, Loader2 } from 'lucide-react';
-import { showSuccess, showWarning } from '@/components/ui/ToasterMsg';
-import { registerUser } from '@/store/slices/authSlice';
+import { showError, showSuccess, showWarning } from '@/components/ui/ToasterMsg';
+import { googleAuth, registerUser } from '@/store/slices/authSlice';
 import { useAppDispatch } from '@/hooks/authHook';
+import { loginWithGoogle } from '@/config/firebase';
 
+function getErrorMessage(errorPayload) {
+  if (!errorPayload) {
+    return "Login failed";
+  }
+
+  // Agar message property exist karti hai
+  if (typeof errorPayload === "object" && errorPayload.message) {
+    return errorPayload.message;
+  }
+
+  // Agar pura string hai
+  if (typeof errorPayload === "string") {
+    return errorPayload;
+  }
+
+  // Agar array hai
+  if (Array.isArray(errorPayload)) {
+    return errorPayload.join(", ");
+  }
+
+  // Agar object hai to JSON stringify
+  if (typeof errorPayload === "object") {
+    return JSON.stringify(errorPayload);
+  }
+
+  // Fallback
+  return String(errorPayload) || "Login failed";
+}
 export default function Signup() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -25,11 +54,54 @@ export default function Signup() {
 
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-
+ const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const handleInputChange = useCallback((field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   }, []);
 
+  const handleGoogleLogin = async () => {
+      setIsGoogleLoading(true);
+      try {
+        const result = await loginWithGoogle();
+        console.log("User Info:", result.user); 
+  
+        // Send user data to your backend
+        // const response = await axios.post(`${API_URL}/api/user/google`, {
+        //   uid: result.user.uid,
+        //   email: result.user.email,
+        //   displayName: result.user.displayName,
+        //   photoURL: result.user.photoURL,
+        //   email_verified:true
+        // }, {
+        //   headers: { "Content-Type": "application/json" }
+        // });
+        const resultGoogle = await dispatch(googleAuth({ email: result.user.email, displayName: result.user.displayName, photoURL: result.user.photoURL, email_verified: true }));
+        // Store the token from your backend
+        // if (resultGoogle.data.token) {
+        //   localStorage.setItem('token', resultGoogle.data.token);
+        //   showSuccess("Successfully logged in with Google", "Auth", 3000);
+        //   navigate("/dashboard");
+        // }
+        if (googleAuth.fulfilled.match(resultGoogle)) {
+          showSuccess("SignUp successful!", "Success", 3000);
+          navigate("/dashboard");
+        } else if (googleAuth.rejected.match(resultGoogle)) {
+          const errorPayload = resultGoogle.payload;
+          showError(getErrorMessage(errorPayload), "Error", 6000);
+        }
+      } catch (error: any) {
+        console.error("Google Login Error:", error);
+        if (error.code === 'auth/popup-blocked') {
+          showError("Please allow pop-ups for Google login", "Google Login Failed", 5000);
+        } else if (error.code === 'auth/popup-closed-by-user') {
+          showError("Google login was cancelled", "Login Cancelled", 4000);
+        } else {
+          showError("Google login failed. Please try again.", "Login Error", 5000);
+        }
+      } finally {
+        setIsGoogleLoading(false);
+      }
+    };
   const validateForm = () => {
     if (formData.name.trim() === "") {
       showWarning("Name Can't Be Blank", "Validation", 3000);
@@ -136,7 +208,7 @@ export default function Signup() {
 
           {/* Social Signup */}
           <div className="space-y-3 mb-6">
-            <Button 
+            {/* <Button 
               type="button" 
               variant="ghost" 
               className="w-full h-12 border border-glass-border hover:bg-primary/10"
@@ -144,16 +216,20 @@ export default function Signup() {
             >
               <Github className="w-5 h-5 mr-3" />
               Continue with GitHub
-            </Button>
-            <Button 
-              type="button" 
-              variant="ghost" 
-              className="w-full h-12 border border-glass-border hover:bg-primary/10"
-              disabled={isLoading}
-            >
-              <Chrome className="w-5 h-5 mr-3" />
-              Continue with Google
-            </Button>
+            </Button> */}
+           <Button 
+                variant="ghost" 
+                className="w-full h-12 border border-glass-border hover:bg-primary/10" 
+                onClick={handleGoogleLogin}
+                disabled={isLoading || isGoogleLoading}
+              >
+                {isGoogleLoading ? (
+                  <Loader2 className="w-5 h-5 mr-3 animate-spin" />
+                ) : (
+                  <Chrome className="w-5 h-5 mr-3" />
+                )}
+                {isGoogleLoading ? "Connecting..." : "Continue with Google"}
+              </Button>
           </div>
 
           {/* Divider */}

@@ -59,6 +59,18 @@ export const loginUser = createAsyncThunk(
     }
   }
 ); 
+export const googleAuth = createAsyncThunk(
+  'auth/google',
+  async ({ email, displayName, photoURL, email_verified }, { rejectWithValue }) => {
+    try {
+      const response = await authService.googleLogin({ email, displayName, photoURL, email_verified });
+      localStorage.setItem('token', response.data.token);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || error.message || 'Login failed');
+    }
+  }
+); 
 
 export const registerUser = createAsyncThunk(
   'auth/register',
@@ -165,6 +177,31 @@ export const verifyToken = createAsyncThunk(
         state.message = null;
       })
       .addCase(loginUser.rejected, (state, action) => {
+        state.isLoading = false;
+        state.message = action.payload?.message || action.payload || null;
+        state.error = action.payload?.errors || [
+          { message: action.payload?.message || 'Registration failed' }
+        ];
+        state.isAuthenticated = false;
+        state.isTokenVerified = true;
+        state.success = 0;
+      });
+    builder
+      .addCase(googleAuth.pending, (state) => {
+        // state.isLoading = true;
+        state.error = null;
+        state.message = null;
+      })
+      .addCase(googleAuth.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = action.payload.user;
+        state.token = action.payload.token;
+        state.isAuthenticated = true;
+        state.isTokenVerified = true; // Mark as verified
+        state.error = null;
+        state.message = null;
+      })
+      .addCase(googleAuth.rejected, (state, action) => {
         state.isLoading = false;
         state.message = action.payload?.message || action.payload || null;
         state.error = action.payload?.errors || [

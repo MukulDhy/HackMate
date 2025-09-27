@@ -65,21 +65,21 @@ const Dashboard = () => {
     ? reduxHackathon
     : (user.currentHackathonId ? {
         _id: user.currentHackathonId,
-        title: reduxHackathon.title || 'AI Revolution Hackathon',
-        description: reduxHackathon.description || 'Build the next generation of AI applications',
-        startDate: reduxHackathon.startDate || '2024-03-15',
-        endDate: reduxHackathon.endDate || '2024-03-17',
-        status: reduxHackathon.status || 'registration_open',
-        totalMembersJoined: reduxHackathon.totalMembersJoined || 247,
-        maxTeamSize: reduxHackathon.maxTeamSize || 5,
-        prizes: reduxHackathon.prizes || [
+        title: reduxHackathon?.title || 'AI Revolution Hackathon',
+        description: reduxHackathon?.description || 'Build the next generation of AI applications',
+        startDate: reduxHackathon?.startDate || '2024-03-15',
+        endDate: reduxHackathon?.endDate || '2024-03-17',
+        status: reduxHackathon?.status || 'registration_open',
+        totalMembersJoined: reduxHackathon?.totalMembersJoined || 247,
+        maxTeamSize: reduxHackathon?.maxTeamSize || 5,
+        prizes: reduxHackathon?.prizes || [
           { position: '1st', amount: 10000 },
           { position: '2nd', amount: 5000 },
           { position: '3rd', amount: 2500 }
         ],
-        registrationDeadline: reduxHackathon.registrationDeadline || '2024-03-10',
-        venue: reduxHackathon.venue || 'Virtual',
-        mode: reduxHackathon.mode || 'online'
+        registrationDeadline: reduxHackathon?.registrationDeadline || '2024-03-10',
+        venue: reduxHackathon?.venue || 'Virtual',
+        mode: reduxHackathon?.mode || 'online'
       } : null);
   const [ currentHackathon, setHackathonData ] = useState(hackathonData || null);
  
