@@ -14,6 +14,7 @@ import {
   AppError,
 } from "../utils/appError.js";
 import Hackathon from "../models/hackthon.model.js";
+import bcryptjs from "bcryptjs";
 
 // Initialize Google OAuth client
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -262,35 +263,39 @@ export const googleAuth = async (req, res, next) => {
   try {
     const { email, displayName, photoURL, email_verified } = req.body;
 
-    // Check if user exists
     let user = await User.findOne({ email });
 
     if (user) {
-      // Update last login
+      // Update last login + verify email if needed
       user.lastLogin = new Date();
       if (!user.isEmailVerified && email_verified) {
         user.isEmailVerified = true;
       }
       if (
         photoURL &&
-        (!user.profilePicture || user.profilePicture === "default-avatar.png")
+        (!user.profilePicture || user.profilePicture.includes("default-avatar"))
       ) {
         user.profilePicture = photoURL;
       }
       await user.save({ validateBeforeSave: false });
     } else {
-      // Create new user
+      // Create new user (password will be auto-hashed in pre-save)
+      const randomPassword = generateValidPassword();
       user = await User.create({
         name: displayName,
         email,
-        password: generateValidPassword(), // Random password for Google users
+        password: randomPassword,
         isEmailVerified: email_verified,
-        profilePicture: photoURL || "default-avatar.png",
+        profilePicture:
+          photoURL ||
+          "https://static.vecteezy.com/system/resources/previews/054/078/735/non_2x/gamer-avatar-with-headphones-and-controller-vector.jpg",
         lastLogin: new Date(),
       });
     }
+
     sendTokenResponse(user, 200, res, "Google authentication successful");
   } catch (error) {
+    console.error(error);
     next(error);
   }
 };

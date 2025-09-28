@@ -126,17 +126,23 @@ useEffect(() => {
       // }, {
       //   headers: { "Content-Type": "application/json" }
       // });
+      console.log("MUKKKKK1111");
+      console.log({ email: result.user.email, displayName: result.user.displayName, photoURL: result.user.photoURL, email_verified: true })
       const resultGoogle = await dispatch(googleAuth({ email: result.user.email, displayName: result.user.displayName, photoURL: result.user.photoURL, email_verified: true }));
       // Store the token from your backend
+      console.log("MUKKKKK2221");
       // if (resultGoogle.data.token) {
-      //   localStorage.setItem('token', resultGoogle.data.token);
-      //   showSuccess("Successfully logged in with Google", "Auth", 3000);
-      //   navigate("/dashboard");
-      // }
-      if (googleAuth.fulfilled.match(resultGoogle)) {
-        showSuccess("Login successful!", "Success", 3000);
-        navigate("/dashboard");
-      } else if (googleAuth.rejected.match(resultGoogle)) {
+        //   localStorage.setItem('token', resultGoogle.data.token);
+        //   showSuccess("Successfully logged in with Google", "Auth", 3000);
+        //   navigate("/dashboard");
+        // }
+        console.log(resultGoogle);
+        if (googleAuth.fulfilled.match(resultGoogle)) {
+          showSuccess("Login successful!", "Success", 3000);
+          console.log("MUKKKKK3333");
+          navigate("/dashboard");
+        } else if (googleAuth.rejected.match(resultGoogle)) {
+        console.log("MUKKKKK35553");
         const errorPayload = resultGoogle.payload;
         showError(getErrorMessage(errorPayload), "Error", 6000);
       }

@@ -46,6 +46,13 @@ const initialState: AuthState = {
   isTokenVerified: false, // Initialize as false
 };
 
+interface GoogleAuthPayload {
+  email: string;
+  displayName: string;
+  photoURL: string;
+  email_verified: boolean;
+}
+
 // Async thunks
 export const loginUser = createAsyncThunk(
   'auth/login',
@@ -61,7 +68,15 @@ export const loginUser = createAsyncThunk(
 ); 
 export const googleAuth = createAsyncThunk(
   'auth/google',
-  async ({ email, displayName, photoURL, email_verified }, { rejectWithValue }) => {
+  async (
+    {
+      email,
+      displayName,
+      photoURL,
+      email_verified,
+    }: GoogleAuthPayload,
+    { rejectWithValue }
+  ) => {
     try {
       const response = await authService.googleLogin({ email, displayName, photoURL, email_verified });
       localStorage.setItem('token', response.data.token);

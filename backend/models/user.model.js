@@ -128,14 +128,10 @@ const userSchema = new mongoose.Schema(
       validate: {
         validator: function (url) {
           if (!url || url === "default-avatar.png") return true;
-          // Validate URL format for profile pictures
-          return (
-            /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/.test(
-              url
-            ) || /^[a-zA-Z0-9_-]+\.(jpg|jpeg|png|gif|webp)$/i.test(url)
-          );
+          // Allow any valid https URL (Google photos, CDN links, etc.)
+          return /^https?:\/\/[^\s]+$/.test(url);
         },
-        message: "Please provide a valid image URL or filename",
+        message: "Please provide a valid image URL",
       },
     },
 

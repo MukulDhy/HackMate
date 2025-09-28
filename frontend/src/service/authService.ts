@@ -57,7 +57,9 @@ export const authService = {
   },
   async googleLogin(userData: { email: string; displayName: string; photoURL?: string; email_verified: boolean }) {
     try {
+      console.log("Google login data:", userData);
       const response = await api.post('/api/user/google', userData);
+      console.log("Reached/////");
       return response.data;
     } catch (error: any) {
       // Extract meaningful error information
