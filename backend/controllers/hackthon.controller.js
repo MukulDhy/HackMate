@@ -23,7 +23,7 @@ export const getHackathons = async (req, res) => {
     const filter = {};
 
     if (status) {
-      filter.status = status;
+      // filter.status = status;
     }
 
     if (mode) {
