@@ -114,6 +114,7 @@ useEffect(() => {
     setIsGoogleLoading(true);
     try {
       const result = await loginWithGoogle();
+      console.log("Google Login Result:", result);
       console.log("User Info:", result.user); 
 
       // Send user data to your backend
