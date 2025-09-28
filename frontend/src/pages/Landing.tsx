@@ -65,7 +65,14 @@ const testimonials = [
     },
 ];
 
-const partners = ['Skill', 'Speed', 'Collaboration', 'Innovation', 'Growth', 'Community'];
+const partners = [
+    'Skill',
+    'Speed',
+    'Collaboration',
+    'Innovation',
+    'Growth',
+    'Community',
+];
 
 export default function Landing() {
     const { user } = useUser();
@@ -80,12 +87,9 @@ export default function Landing() {
                 >
                     {/* Hero Background Image Overlay */}
                     <div
-                        className="absolute inset-0 -z-10 opacity-20 rounded-3xl"
+                        className={`absolute inset-0 -z-10 rounded-3xl bg-cover bg-center opacity-10 sm:opacity-20 blur-sm sm:blur-md`}
                         style={{
                             backgroundImage: `url(${heroBackground})`,
-                            backgroundSize: 'cover',
-                            backgroundPosition: 'center',
-                            filter: 'blur(1px)',
                         }}
                     />
 
@@ -99,7 +103,7 @@ export default function Landing() {
                         }}
                         className="mb-8 flex justify-center"
                     >
-                        <div className="w-32 h-32 flex items-center justify-center bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl shadow-xl">
+                        <div className="hidden sm:flex w-32 h-32 items-center justify-center bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl shadow-xl">
                             <span className="text-4xl font-bold text-white">
                                 HM
                             </span>
@@ -124,15 +128,12 @@ export default function Landing() {
                         transition={{ delay: 1 }}
                         className="flex flex-col sm:flex-row gap-4 justify-center"
                     >
-                        <Link to={user ? "/lobbies" : "/login"}>
+                        <Link to={user ? '/lobbies' : '/login'}>
                             <Button variant="hero" size="xl" className="group">
                                 Join Hackathon
                                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                             </Button>
                         </Link>
-                        {/* <Button variant="glass" size="xl">
-                            Learn More
-                        </Button> */}
                     </motion.div>
                 </PageHeader>
 
@@ -237,7 +238,7 @@ export default function Landing() {
                     </div>
 
                     <GlassCard className="p-8">
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 items-center">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 items-center">
                             {partners.map((partner, index) => (
                                 <motion.div
                                     key={partner}
@@ -247,7 +248,7 @@ export default function Landing() {
                                     transition={{ delay: index * 0.1 }}
                                     className="text-center"
                                 >
-                                    <div className="text-2xl font-bold text-muted-foreground hover:text-primary transition-colors duration-300 cursor-pointer">
+                                    <div className="text-lg md:text-2xl font-bold text-muted-foreground hover:text-primary transition-colors duration-300 cursor-pointer">
                                         {partner}
                                     </div>
                                 </motion.div>
@@ -279,9 +280,6 @@ export default function Landing() {
                                         <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                                     </Button>
                                 </Link>
-                                {/* <Button variant="neon" size="xl">
-                                    View Demo
-                                </Button> */}
                             </div>
                         </GlassCard>
                     </div>
