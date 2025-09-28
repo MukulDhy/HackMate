@@ -1,10 +1,13 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+import { 
+  getAuth, 
+  GoogleAuthProvider, 
+  signInWithPopup, 
+  signInWithRedirect, 
+  getRedirectResult 
+} from "firebase/auth";
 
 // Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyC-AGc6z5lHQ1uG5WoBj2TmdjePOcgCO7U",
   authDomain: "hackmate-7488c.firebaseapp.com",
@@ -15,9 +18,28 @@ const firebaseConfig = {
   measurementId: "G-YXH3Y1PV05"
 };
 
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const provider = new GoogleAuthProvider();
 
 // Google Login Function
-export const loginWithGoogle = () => signInWithPopup(auth, provider);
+export const loginWithGoogle = async () => {
+  try {
+    if (/Mobi|Android|iPhone/i.test(navigator.userAgent)) {
+      // Mobile → Redirect flow
+      await signInWithRedirect(auth, provider);
+      const result = await getRedirectResult(auth);
+      console.log("Google login success (redirect):", result);
+      return result;
+    } else {
+      // Desktop → Popup flow
+      const result = await signInWithPopup(auth, provider);
+      console.log("Google login success (popup):", result);
+      return result;
+    }
+  } catch (error) {
+    console.error("Google login error:", error);
+    throw error; // re-throw if you want to handle it outside
+  }
+};

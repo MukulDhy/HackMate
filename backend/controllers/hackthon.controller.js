@@ -42,7 +42,7 @@ export const getHackathons = async (req, res) => {
     }
 
     // Only show active hackathons for public access
-    filter.isActive = true;
+    // filter.isActive = true;
 
     // Calculate pagination
     const skip = (Number(page) - 1) * Number(limit);
