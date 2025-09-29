@@ -66,7 +66,8 @@ const classifyError = (error) => {
 
   if (
     error.message.includes("No participants") ||
-    error.message.includes("No problem statements")
+    error.message.includes("No problem statements") ||
+    error.message.includes("Not enough participants")
   ) {
     return new SchedulerError(
       error.message,
@@ -112,7 +113,7 @@ const retryOperation = async (operation, maxRetries = 3, baseDelay = 500) => {
   throw lastError;
 };
 
-// Function to cancel hackathon and cleanup
+// Function to cancel hackathon and cleanup (standalone function with its own session)
 const cancelHackathon = async (hackathon, reason = "Technical issues", io) => {
   const session = await mongoose.startSession();
 
@@ -213,6 +214,7 @@ const cancelHackathon = async (hackathon, reason = "Technical issues", io) => {
 // Team creation logic with proper transaction handling and cancellation on failure
 const createTeamsForHackathon = async (hackathon, io) => {
   const session = await mongoose.startSession();
+  let transactionCommitted = false;
 
   try {
     await session.startTransaction();
@@ -226,11 +228,10 @@ const createTeamsForHackathon = async (hackathon, io) => {
       title,
     } = hackathon;
 
-    // Validation checks
+    // Validation checks - throw errors instead of calling cancelHackathon here
     if (!participants || participants.length === 0) {
       const errorMsg = `No participants for hackathon: ${title}`;
       logger.warn(errorMsg);
-      await cancelHackathon(hackathon, "No participants registered", io);
       throw new SchedulerError(
         errorMsg,
         ErrorTypes.BUSINESS,
@@ -242,7 +243,6 @@ const createTeamsForHackathon = async (hackathon, io) => {
     if (!problemStatements || problemStatements.length === 0) {
       const errorMsg = `No problem statements for hackathon: ${title}`;
       logger.warn(errorMsg);
-      await cancelHackathon(hackathon, "No problem statements defined", io);
       throw new SchedulerError(
         errorMsg,
         ErrorTypes.BUSINESS,
@@ -254,11 +254,6 @@ const createTeamsForHackathon = async (hackathon, io) => {
     if (participants.length < minParticipantsToFormTeam) {
       const errorMsg = `Not enough participants to form teams. Need at least ${minParticipantsToFormTeam}, have ${participants.length}`;
       logger.warn(errorMsg);
-      await cancelHackathon(
-        hackathon,
-        "Insufficient participants to form teams",
-        io
-      );
       throw new SchedulerError(
         errorMsg,
         ErrorTypes.BUSINESS,
@@ -272,11 +267,6 @@ const createTeamsForHackathon = async (hackathon, io) => {
     if (hackathon.startDate <= now) {
       const errorMsg = `Hackathon ${title} has already started. Cannot form teams.`;
       logger.error(errorMsg);
-      await cancelHackathon(
-        hackathon,
-        "Hackathon already started but team formation failed",
-        io
-      );
       throw new SchedulerError(
         errorMsg,
         ErrorTypes.BUSINESS,
@@ -440,6 +430,7 @@ const createTeamsForHackathon = async (hackathon, io) => {
     );
 
     await session.commitTransaction();
+    transactionCommitted = true;
     logger.info(`Transaction committed successfully for hackathon: ${title}`);
 
     // Send emails outside transaction
@@ -475,19 +466,23 @@ const createTeamsForHackathon = async (hackathon, io) => {
       hackathonTitle: title,
     };
   } catch (error) {
-    await session.abortTransaction();
+    // Only abort transaction if it hasn't been committed
+    if (!transactionCommitted) {
+      await session.abortTransaction();
+    }
 
-    // If team formation fails and hackathon hasn't started, cancel it
+    // If team formation fails due to business rules and hackathon hasn't started, cancel it
     const now = new Date();
-    if (hackathon.startDate > now) {
-      logger.error(
-        `Team formation failed for hackathon ${hackathon.title}, cancelling hackathon:`,
-        error
+    if (hackathon.startDate > now && error.type === ErrorTypes.BUSINESS) {
+      logger.warn(
+        `Team formation failed for hackathon ${hackathon.title} due to business rules, cancelling hackathon:`,
+        error.message
       );
       try {
+        // Use a separate session for cancellation
         await cancelHackathon(
           hackathon,
-          "Team formation failed due to technical issues",
+          `Team formation failed: ${error.message}`,
           io
         );
       } catch (cancelError) {
@@ -496,6 +491,11 @@ const createTeamsForHackathon = async (hackathon, io) => {
           cancelError
         );
       }
+    } else if (error.type === ErrorTypes.FATAL) {
+      logger.error(
+        `Fatal error during team formation for hackathon ${hackathon.title}:`,
+        error
+      );
     }
 
     throw error;
@@ -661,8 +661,7 @@ export const startScheduler = (io) => {
               );
             } else if (error.type === ErrorTypes.BUSINESS) {
               logger.info(
-                `Business rule violation for hackathon ${hackathon.title}:`,
-                error.message
+                `Business rule violation for hackathon ${hackathon.title}: ${error.message}`
               );
             } else {
               logger.error(

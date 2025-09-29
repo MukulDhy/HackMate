@@ -206,6 +206,7 @@ const HackathonDetailsPage = () => {
       if (response.data.success) {
         console.log('Hackathon data:', response.data.data);
         setHackathonData(response.data.data);
+        setIsJoined( (userhack.joined && userhack.hackathon._id === user.currentHackathonId ) || false)
       } else {
         setError(response.data.message || 'Failed to fetch hackathon');
       }
