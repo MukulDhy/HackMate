@@ -478,7 +478,7 @@ export const leaveHackathon = async (req, res) => {
       (participantId) => participantId.toString() !== user._id.toString()
     );
 
-    hackathon.totalMembersJoined = hackathon.participants.length - 1;
+    hackathon.totalMembersJoined = hackathon.participants.length;
     await hackathon.save();
 
     // Clear user's current hackathon

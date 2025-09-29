@@ -99,7 +99,7 @@ const retryOperation = async (operation, maxRetries = 3, baseDelay = 500) => {
       }
 
       const delay = baseDelay * Math.pow(2, attempt - 1);
-      console.warn(`Attempt ${attempt} failed. Retrying in ${delay}ms...`, {
+      logger.warn(`Attempt ${attempt} failed. Retrying in ${delay}ms...`, {
         error: lastError.message,
         type: lastError.type,
         code: lastError.code,
@@ -112,7 +112,105 @@ const retryOperation = async (operation, maxRetries = 3, baseDelay = 500) => {
   throw lastError;
 };
 
-// Team creation logic with proper transaction handling
+// Function to cancel hackathon and cleanup
+const cancelHackathon = async (hackathon, reason = "Technical issues", io) => {
+  const session = await mongoose.startSession();
+
+  try {
+    await session.startTransaction();
+
+    const { _id, title, participants } = hackathon;
+
+    logger.info(`Cancelling hackathon: ${title}`, {
+      hackathonId: _id,
+      reason,
+      participantCount: participants?.length || 0,
+    });
+
+    // Update hackathon status to cancelled
+    await Hackathon.findByIdAndUpdate(
+      _id,
+      {
+        $set: {
+          status: "cancelled",
+          isActive: false,
+          reason: reason,
+        },
+      },
+      { session }
+    );
+
+    // Clear currentHackathonId for all participants
+    if (participants && participants.length > 0) {
+      const userUpdatePromises = participants.map((participantId) =>
+        User.findByIdAndUpdate(
+          participantId,
+          {
+            $unset: { currentHackathonId: null },
+          },
+          { session }
+        )
+      );
+
+      await Promise.all(userUpdatePromises);
+      logger.info(
+        `Cleared currentHackathonId for ${participants.length} participants`
+      );
+    }
+
+    // Delete any teams that were created for this hackathon
+    const teamsDeleted = await Team.deleteMany(
+      { hackathonId: _id },
+      { session }
+    );
+
+    // Delete team members associated with those teams
+    if (teamsDeleted.deletedCount > 0) {
+      const teamIds = (
+        await Team.find({ hackathonId: _id }).session(session)
+      ).map((team) => team._id);
+      await TeamMember.deleteMany({ teamId: { $in: teamIds } }, { session });
+      logger.info(
+        `Deleted ${teamsDeleted.deletedCount} teams and their members`
+      );
+    }
+
+    await session.commitTransaction();
+
+    logger.info(`Successfully cancelled hackathon: ${title}`, {
+      hackathonId: _id,
+      participantsCleared: participants?.length || 0,
+      teamsDeleted: teamsDeleted.deletedCount || 0,
+    });
+
+    // Notify clients about hackathon cancellation
+    if (io) {
+      io.to(_id.toString()).emit("hackathon-cancelled", {
+        hackathonId: _id,
+        hackathonTitle: title,
+        reason: reason,
+        cancelledAt: new Date().toISOString(),
+      });
+    }
+
+    return {
+      success: true,
+      hackathonId: _id,
+      hackathonTitle: title,
+      participantsCleared: participants?.length || 0,
+      teamsDeleted: teamsDeleted.deletedCount || 0,
+      reason: reason,
+    };
+  } catch (error) {
+    await session.abortTransaction();
+    logger.error(`Failed to cancel hackathon ${hackathon.title}:`, error);
+    throw error;
+  } finally {
+    session.endSession();
+  }
+};
+
+// Team creation logic with proper transaction handling and cancellation on failure
 const createTeamsForHackathon = async (hackathon, io) => {
   const session = await mongoose.startSession();
 
@@ -126,33 +224,74 @@ const createTeamsForHackathon = async (hackathon, io) => {
       minParticipantsToFormTeam,
       _id,
       title,
-      hackathonId,
     } = hackathon;
 
-    // Validation checks - FIXED: Use participants array directly
+    // Validation checks
     if (!participants || participants.length === 0) {
-      logger.info(`No participants for hackathon: ${title}`);
-      return false;
+      const errorMsg = `No participants for hackathon: ${title}`;
+      logger.warn(errorMsg);
+      await cancelHackathon(hackathon, "No participants registered", io);
+      throw new SchedulerError(
+        errorMsg,
+        ErrorTypes.BUSINESS,
+        "NO_PARTICIPANTS",
+        false
+      );
     }
 
     if (!problemStatements || problemStatements.length === 0) {
-      logger.info(`No problem statements for hackathon: ${title}`);
-      return false;
-    }
-    if (participants.length < minParticipantsToFormTeam) {
-      logger.info(
-        `Not enough participants to form teams. Need at least ${minParticipantsToFormTeam}, have ${participants.length}`
+      const errorMsg = `No problem statements for hackathon: ${title}`;
+      logger.warn(errorMsg);
+      await cancelHackathon(hackathon, "No problem statements defined", io);
+      throw new SchedulerError(
+        errorMsg,
+        ErrorTypes.BUSINESS,
+        "NO_PROBLEM_STATEMENTS",
+        false
       );
-      return false;
     }
 
-    // Calculate optimal team distribution - FIXED: Remove minParticipantsToFormTeam check
+    if (participants.length < minParticipantsToFormTeam) {
+      const errorMsg = `Not enough participants to form teams. Need at least ${minParticipantsToFormTeam}, have ${participants.length}`;
+      logger.warn(errorMsg);
+      await cancelHackathon(
+        hackathon,
+        "Insufficient participants to form teams",
+        io
+      );
+      throw new SchedulerError(
+        errorMsg,
+        ErrorTypes.BUSINESS,
+        "INSUFFICIENT_PARTICIPANTS",
+        false
+      );
+    }
+
+    // Check if hackathon has already started
+    const now = new Date();
+    if (hackathon.startDate <= now) {
+      const errorMsg = `Hackathon ${title} has already started. Cannot form teams.`;
+      logger.error(errorMsg);
+      await cancelHackathon(
+        hackathon,
+        "Hackathon already started but team formation failed",
+        io
+      );
+      throw new SchedulerError(
+        errorMsg,
+        ErrorTypes.BUSINESS,
+        "HACKATHON_STARTED",
+        false
+      );
+    }
+
+    // Calculate optimal team distribution
     const totalParticipants = participants.length;
     const optimalTeamCount = Math.ceil(totalParticipants / maxTeamSize);
     const baseTeamSize = Math.floor(totalParticipants / optimalTeamCount);
     const remainder = totalParticipants % optimalTeamCount;
 
-    console.log(`Creating teams for hackathon: ${title}`, {
+    logger.info(`Creating teams for hackathon: ${title}`, {
       totalParticipants,
       optimalTeamCount,
       baseTeamSize,
@@ -179,13 +318,7 @@ const createTeamsForHackathon = async (hackathon, io) => {
     for (let teamIndex = 0; teamIndex < optimalTeamCount; teamIndex++) {
       const currentTeamSize =
         teamIndex < remainder ? baseTeamSize + 1 : baseTeamSize;
-      // Validate team size meets requirements
-      // if (currentTeamSize < minParticipantsToFormTeam) {
-      //   console.info(
-      //     `Skipping team: size ${currentTeamSize} is below minimum ${minParticipantsToFormTeam}`
-      //   );
-      //   continue;
-      // }
+
       if (participantIndex >= shuffledParticipants.length) break;
 
       const teamMembers = shuffledParticipants.slice(
@@ -206,19 +339,16 @@ const createTeamsForHackathon = async (hackathon, io) => {
         .substring(2, 8)
         .toUpperCase()}`;
 
-      // FIXED: Use ObjectId values from participants array
-      const teamMemberIds = teamMembers.map((member) => member);
-
-      // Create team document - FIXED: Use hackathonId field
+      // Create team document
       const team = await Team.create(
         [
           {
-            hackathonId: _id, // Using _id as hackathon reference
+            hackathonId: _id,
             name: teamName,
             problemStatement: randomProblem,
             submissionStatus: "not_submitted",
             teamSize: currentTeamSize,
-            teamMember: teamMemberIds,
+            teamMember: teamMembers,
           },
         ],
         { session }
@@ -270,7 +400,6 @@ const createTeamsForHackathon = async (hackathon, io) => {
 
       // Prepare email notifications (outside transaction)
       for (const memberId of teamMembers) {
-        // FIXED: Need to fetch user details for email
         const user = await User.findById(memberId).session(session);
         if (!user) continue;
 
@@ -291,25 +420,27 @@ const createTeamsForHackathon = async (hackathon, io) => {
             teammates: teammateNames,
             problemStatement: randomProblem,
             teamName: teamName,
+          }).catch((emailError) => {
+            logger.error(`Failed to send email to ${user.email}:`, emailError);
+            return null;
           })
         );
       }
     }
 
-    // Update hackathon status - FIXED: Use correct status values from schema
+    // Update hackathon status
     await Hackathon.findByIdAndUpdate(
       _id,
       {
         $set: {
           status: "registration_closed",
-          // FIXED: Remove teamsFormed field as it doesn't exist in schema
         },
       },
       { session }
     );
 
     await session.commitTransaction();
-    console.log(`Transaction committed successfully for hackathon: ${title}`);
+    logger.info(`Transaction committed successfully for hackathon: ${title}`);
 
     // Send emails outside transaction
     if (emailPromises.length > 0) {
@@ -321,7 +452,7 @@ const createTeamsForHackathon = async (hackathon, io) => {
         (r) => r.status === "rejected"
       ).length;
 
-      console.log(
+      logger.info(
         `Emails sent: ${successfulEmails} successful, ${failedEmails} failed`
       );
 
@@ -333,14 +464,6 @@ const createTeamsForHackathon = async (hackathon, io) => {
         }
       });
     }
-    // Notify clients
-    // if (io && createdTeams.length > 0) {
-    //   io.to(_id.toString()).emit("teams-formed", {
-    //     hackathonId: _id,
-    //     teams: createdTeams,
-    //     timestamp: new Date().toISOString(),
-    //   });
-    // }
 
     logger.info(
       `Successfully created ${createdTeams.length} teams for ${title}`
@@ -353,6 +476,28 @@ const createTeamsForHackathon = async (hackathon, io) => {
     };
   } catch (error) {
     await session.abortTransaction();
+
+    // If team formation fails and hackathon hasn't started, cancel it
+    const now = new Date();
+    if (hackathon.startDate > now) {
+      logger.error(
+        `Team formation failed for hackathon ${hackathon.title}, cancelling hackathon:`,
+        error
+      );
+      try {
+        await cancelHackathon(
+          hackathon,
+          "Team formation failed due to technical issues",
+          io
+        );
+      } catch (cancelError) {
+        logger.error(
+          `Failed to cancel hackathon after team formation failure:`,
+          cancelError
+        );
+      }
+    }
+
     throw error;
   } finally {
     session.endSession();
@@ -366,21 +511,20 @@ const completeHackathon = async (hackathon, io) => {
   try {
     await session.startTransaction();
 
-    const { _id, title, status } = hackathon;
+    const { _id, title, status, participants } = hackathon;
 
-    console.log(`Completing hackathon: ${title}`, {
+    logger.info(`Completing hackathon: ${title}`, {
       hackathonId: _id,
       currentStatus: status,
     });
 
-    // Update hackathon status to completed - FIXED: Use correct status value
+    // Update hackathon status to completed
     await Hackathon.findByIdAndUpdate(
       _id,
       {
         $set: {
           status: "completed",
           isActive: false,
-          // FIXED: Remove completedAt as it doesn't exist in schema (use timestamps)
         },
       },
       { session }
@@ -388,7 +532,7 @@ const completeHackathon = async (hackathon, io) => {
 
     // Find all teams for this hackathon
     const teams = await Team.find({ hackathonId: _id }).session(session);
-    console.log(
+    logger.info(
       `Found ${teams.length} teams to process for hackathon: ${title}`
     );
 
@@ -399,7 +543,6 @@ const completeHackathon = async (hackathon, io) => {
         {
           $set: {
             status: "completed",
-            // FIXED: Remove completedAt if not in Team schema
           },
         },
         { session }
@@ -407,8 +550,7 @@ const completeHackathon = async (hackathon, io) => {
     );
 
     // Clear currentHackathonId for all participants
-    const participantIds = hackathon.participants;
-    const userUpdatePromises = participantIds.map((participantId) =>
+    const userUpdatePromises = participants.map((participantId) =>
       User.findByIdAndUpdate(
         participantId,
         {
@@ -421,102 +563,27 @@ const completeHackathon = async (hackathon, io) => {
     await Promise.all([...teamUpdatePromises, ...userUpdatePromises]);
     await session.commitTransaction();
 
-    console.log(`Successfully completed hackathon: ${title}`);
-    // Notify clients about hackathon completion
-    // if (io) {
-    //   io.to(_id.toString()).emit("hackathon-completed", {
-    //     hackathonId: _id,
-    //     hackathonTitle: title,
-    //     completedAt: new Date().toISOString(),
-    //     teamsCount: teams.length,
-    //   });
-    // }
+    logger.info(`Successfully completed hackathon: ${title}`);
+
     return {
       success: true,
       hackathonId: _id,
       hackathonTitle: title,
       teamsProcessed: teams.length,
-      participantsProcessed: participantIds.length,
+      participantsProcessed: participants.length,
     };
   } catch (error) {
     await session.abortTransaction();
+    logger.error(`Failed to complete hackathon ${hackathon.title}:`, error);
     throw error;
   } finally {
     session.endSession();
   }
 };
 
-// Function to schedule hackathon completion when it starts
-// const scheduleHackathonCompletion = (hackathon, io) => {
-//   const { _id, endDate, title } = hackathon;
-
-//   if (!endDate) {
-//     logger.warn(
-//       `Hackathon ${title} has no end date, cannot schedule completion`
-//     );
-//     return null;
-//   }
-
-//   const now = new Date();
-//   const endTime = new Date(endDate);
-
-//   if (endTime <= now) {
-//     console.log(`Hackathon ${title} has already ended, completing immediately`);
-//     retryOperation(() => completeHackathon(hackathon, io), 3, 500).catch(
-//       (error) => {
-//         logger.error(
-//           `Failed to complete hackathon ${title} immediately:`,
-//           error
-//         );
-//       }
-//     );
-//     return null;
-//   }
-
-//   const delay = endTime.getTime() - now.getTime();
-
-//   console.log(`Scheduling completion for hackathon: ${title}`, {
-//     hackathonId: _id,
-//     endTime: endTime.toISOString(),
-//     delayMs: delay,
-//     delayMinutes: Math.round(delay / (1000 * 60)),
-//   });
-
-//   const timeoutId = setTimeout(async () => {
-//     try {
-//       const currentHackathon = await Hackathon.findById(_id);
-//       if (!currentHackathon) {
-//         logger.error(`Hackathon ${_id} not found when trying to complete`);
-//         return;
-//       }
-
-//       if (currentHackathon.status === "completed") {
-//         logger.info(`Hackathon ${title} is already completed, skipping`);
-//         return;
-//       }
-
-//       await retryOperation(
-//         () => completeHackathon(currentHackathon, io),
-//         3,
-//         500
-//       );
-//       logger.info(
-//         `Successfully completed hackathon via scheduled task: ${title}`
-//       );
-//     } catch (error) {
-//       logger.error(
-//         `Failed to complete hackathon ${title} via scheduled task:`,
-//         error
-//       );
-//     }
-//   }, delay);
-
-//   return timeoutId;
-// };
-
 // Main scheduler function with comprehensive error handling
 export const startScheduler = (io) => {
-  // Team formation scheduler (runs every minute)
+  // Team formation scheduler (runs every 30 seconds)
   cron.schedule(
     "*/30 * * * * *",
     async () => {
@@ -528,24 +595,26 @@ export const startScheduler = (io) => {
       };
 
       try {
-        // console.log("Team formation scheduler started at:", marker.timestamp);
+        logger.debug("Team formation scheduler started", {
+          timestamp: marker.timestamp,
+        });
+
         const now = new Date();
         const twoMinutesAgo = new Date(now.getTime() - 2 * 60000);
-        // FIXED: Find hackathons where registration deadline has passed
-        // const hak = await Hackathon.find({});
-        // console.log("All hackathons:", hak);
+
+        // Find hackathons where registration deadline has passed
         const hackathonsToProcess = await Hackathon.find({
           registrationDeadline: { $lte: now, $gte: twoMinutesAgo },
           isActive: true,
           status: "registration_open",
-          participants: { $exists: true, $ne: [] }, // FIXED: Check for non-empty participants array
+          participants: { $exists: true, $ne: [] },
         }).populate({
           path: "participants",
           select: "name email skills",
         });
 
         marker.hackathonsToProcess = hackathonsToProcess.length;
-        console.log(
+        logger.info(
           `Found ${hackathonsToProcess.length} hackathons to process for team formation`
         );
 
@@ -558,9 +627,10 @@ export const startScheduler = (io) => {
           };
 
           try {
-            console.log(
+            logger.info(
               `Processing hackathon for team formation: ${hackathon.title}`
             );
+
             const result = await retryOperation(
               () => createTeamsForHackathon(hackathon, io),
               3,
@@ -572,7 +642,7 @@ export const startScheduler = (io) => {
             hackathonMarker.result = result;
             marker.hackathonsProcessed++;
 
-            console.log(`Successfully processed hackathon: ${hackathon.title}`);
+            logger.info(`Successfully processed hackathon: ${hackathon.title}`);
           } catch (error) {
             hackathonMarker.status = "failed";
             hackathonMarker.error = {
@@ -605,10 +675,11 @@ export const startScheduler = (io) => {
 
         marker.status = "completed";
         marker.completedAt = new Date().toISOString();
-        // console.log("Team formation scheduler completed", {
-        //   hackathonsProcessed: marker.hackathonsProcessed,
-        //   totalErrors: marker.errors.length,
-        // });
+
+        logger.debug("Team formation scheduler completed", {
+          hackathonsProcessed: marker.hackathonsProcessed,
+          totalErrors: marker.errors.length,
+        });
       } catch (error) {
         marker.status = "failed";
         marker.error = classifyError(error);
@@ -634,10 +705,10 @@ export const startScheduler = (io) => {
       };
 
       try {
-        // console.log(
-        //   "Hackathon completion scheduler started at:",
-        //   marker.timestamp
-        // );
+        logger.debug("Hackathon completion scheduler started", {
+          timestamp: marker.timestamp,
+        });
+
         const now = new Date();
         const threshold = new Date(now.getTime() + 3 * 60 * 1000);
 
@@ -652,7 +723,7 @@ export const startScheduler = (io) => {
         });
 
         marker.hackathonsToComplete = hackathonsToComplete.length;
-        console.log(
+        logger.info(
           `Found ${hackathonsToComplete.length} hackathons to complete`
         );
 
@@ -665,7 +736,7 @@ export const startScheduler = (io) => {
           };
 
           try {
-            console.log(`Completing hackathon: ${hackathon.title}`);
+            logger.info(`Completing hackathon: ${hackathon.title}`);
             await retryOperation(
               () => completeHackathon(hackathon, io),
               3,
@@ -676,7 +747,7 @@ export const startScheduler = (io) => {
             hackathonMarker.completedAt = new Date().toISOString();
             marker.hackathonsScheduled++;
 
-            console.log(`Successfully completed hackathon: ${hackathon.title}`);
+            logger.info(`Successfully completed hackathon: ${hackathon.title}`);
           } catch (error) {
             hackathonMarker.status = "failed";
             hackathonMarker.error = {
@@ -695,10 +766,11 @@ export const startScheduler = (io) => {
 
         marker.status = "completed";
         marker.completedAt = new Date().toISOString();
-        // console.log("Hackathon completion scheduler completed", {
-        //   hackathonsScheduled: marker.hackathonsScheduled,
-        //   totalErrors: marker.errors.length,
-        // });
+
+        logger.debug("Hackathon completion scheduler completed", {
+          hackathonsScheduled: marker.hackathonsScheduled,
+          totalErrors: marker.errors.length,
+        });
       } catch (error) {
         marker.status = "failed";
         marker.error = classifyError(error);
@@ -717,11 +789,11 @@ export const startScheduler = (io) => {
     "*/5 * * * *",
     async () => {
       try {
-        console.log("Hackathon status update scheduler started");
+        logger.info("Hackathon status update scheduler started");
         const now = new Date();
 
         // Update hackathons that should be in "ongoing" status
-        await Hackathon.updateMany(
+        const ongoingResult = await Hackathon.updateMany(
           {
             startDate: { $lte: now },
             endDate: { $gt: now },
@@ -734,7 +806,7 @@ export const startScheduler = (io) => {
         );
 
         // Update hackathons that should be in "winner_to_announced" status
-        await Hackathon.updateMany(
+        const winnerResult = await Hackathon.updateMany(
           {
             endDate: { $lte: now },
             winnerAnnouncementDate: { $gt: now },
@@ -746,7 +818,10 @@ export const startScheduler = (io) => {
           }
         );
 
-        console.log("Hackathon status update scheduler completed");
+        logger.info("Hackathon status update scheduler completed", {
+          ongoingUpdated: ongoingResult.modifiedCount,
+          winnerUpdated: winnerResult.modifiedCount,
+        });
       } catch (error) {
         logger.error("Hackathon status update scheduler error:", error);
       }
@@ -757,9 +832,16 @@ export const startScheduler = (io) => {
     }
   );
 
-  console.log("All hackathon schedulers started successfully");
-  logger.info("All hackathon schedulers started");
+  logger.info("All hackathon schedulers started successfully");
 };
 
 // Export for testing
-export { ErrorTypes, SchedulerError, classifyError, retryOperation };
+export {
+  ErrorTypes,
+  SchedulerError,
+  classifyError,
+  retryOperation,
+  createTeamsForHackathon,
+  completeHackathon,
+  cancelHackathon,
+};
