@@ -6,6 +6,39 @@ import User from "../models/user.model.js";
 // @route   GET /api/hackathons
 // @access  Public
 
+// 🔹 Helper function to determine status
+const determineHackathonStatus = (hackathon) => {
+  const now = new Date();
+
+  if (now < hackathon.registrationDeadline) {
+    return "registration_open";
+  } else if (
+    now >= hackathon.registrationDeadline &&
+    now < hackathon.startDate
+  ) {
+    return "registration_closed";
+  } else if (now >= hackathon.startDate && now <= hackathon.endDate) {
+    return "ongoing";
+  } else if (
+    hackathon.winnerAnnouncementDate &&
+    now > hackathon.endDate &&
+    now < hackathon.winnerAnnouncementDate
+  ) {
+    return "winner_to_announced";
+  } else if (
+    (hackathon.winnerAnnouncementDate &&
+      now >= hackathon.winnerAnnouncementDate) ||
+    (!hackathon.winnerAnnouncementDate && now > hackathon.endDate)
+  ) {
+    return "completed";
+  } else {
+    return hackathon.status; // fallback (maybe "cancelled" etc.)
+  }
+};
+
+// @desc    Get all hackathons
+// @route   GET /api/hackathons
+// @access  Public
 export const getHackathons = async (req, res) => {
   try {
     const {
@@ -19,21 +52,11 @@ export const getHackathons = async (req, res) => {
       sortOrder = "desc",
     } = req.query;
 
-    // Build filter object
     const filter = {};
-
-    if (status) {
-      filter.status = status;
-    }
-
-    if (mode) {
-      filter.mode = mode;
-    }
-
-    if (tags) {
+    if (status) filter.status = status;
+    if (mode) filter.mode = mode;
+    if (tags)
       filter.tags = { $in: Array.isArray(tags) ? tags : tags.split(",") };
-    }
-
     if (search) {
       filter.$or = [
         { title: { $regex: search, $options: "i" } },
@@ -41,20 +64,25 @@ export const getHackathons = async (req, res) => {
       ];
     }
 
-    // Only show active hackathons for public access
-    // filter.isActive = true;
-
-    // Calculate pagination
     const skip = (Number(page) - 1) * Number(limit);
+    const sort = { [sortBy]: sortOrder === "desc" ? -1 : 1 };
 
-    // Build sort object
-    const sort = {};
-    sort[sortBy] = sortOrder === "desc" ? -1 : 1;
-
-    const hackathons = await Hackathon.find(filter)
+    let hackathons = await Hackathon.find(filter)
       .sort(sort)
       .skip(skip)
       .limit(Number(limit));
+
+    // 🔹 Check & update status for each hackathon
+    const updates = hackathons.map(async (hackathon) => {
+      const newStatus = determineHackathonStatus(hackathon);
+      if (hackathon.status !== newStatus) {
+        hackathon.status = newStatus;
+        await hackathon.save();
+      }
+      return hackathon;
+    });
+
+    hackathons = await Promise.all(updates);
 
     const total = await Hackathon.countDocuments(filter);
 
@@ -81,34 +109,29 @@ export const getHackathons = async (req, res) => {
 // @access  Public
 export const getHackathon = async (req, res) => {
   try {
-    const hackathon = await Hackathon.findById(req.params.id);
+    let hackathon = await Hackathon.findById(req.params.id);
 
     if (!hackathon) {
-      return res.status(404).json({
-        success: false,
-        message: "Hackathon not found",
-      });
+      return res
+        .status(404)
+        .json({ success: false, message: "Hackathon not found" });
     }
 
-    // if (!hackathon.isActive) {
-    //   return res.status(404).json({
-    //     success: false,
-    //     message: "Hackathon not available",
-    //   });
-    // }
+    // 🔹 Update status if outdated
+    const newStatus = determineHackathonStatus(hackathon);
+    if (hackathon.status !== newStatus) {
+      hackathon.status = newStatus;
+      await hackathon.save();
+    }
 
-    res.status(200).json({
-      success: true,
-      data: hackathon,
-    });
+    res.status(200).json({ success: true, data: hackathon });
   } catch (error) {
     console.error("Get hackathon error:", error);
 
     if (error.name === "CastError") {
-      return res.status(404).json({
-        success: false,
-        message: "Hackathon not found",
-      });
+      return res
+        .status(404)
+        .json({ success: false, message: "Hackathon not found" });
     }
 
     res.status(500).json({
@@ -292,10 +315,11 @@ export const createHackathon = async (req, res) => {
 // @desc    join hackathon
 // @route   POST /api
 // @access  authorization user only
+
 export const joinHackathon = async (req, res) => {
   try {
     const hackathonId = req.params.id;
-    const user = await User.findById(req.user._id); // safer than req.user directly
+    const user = await User.findById(req.user._id);
 
     if (!user) {
       return res.status(404).json({
@@ -304,11 +328,44 @@ export const joinHackathon = async (req, res) => {
       });
     }
 
-    if (user.currentHackathonId) {
-      return res.status(400).json({
-        success: false,
-        message: `Already into a Hackathon id number : ${user.currentHackathonId}`,
-      });
+    if (user.currentHackathonId !== null) {
+      const currentHackathon = await Hackathon.findById(
+        user.currentHackathonId
+      );
+      console.log("Current Hackathon:", currentHackathon);
+      if (currentHackathon) {
+        const currentStatus = determineHackathonStatus(currentHackathon);
+        if (currentHackathon.status !== currentStatus) {
+          currentHackathon.status = currentStatus;
+          await currentHackathon.save();
+        }
+
+        if (
+          currentHackathon.status === "completed" ||
+          currentHackathon.status === "cancelled"
+        ) {
+          // 🔹 User's hackathon ended → reset
+          user.currentHackathonId = null;
+          await user.save();
+        } else if (String(user.currentHackathonId) === String(hackathonId)) {
+          // 🔹 Already in this hackathon
+          return res.status(200).json({
+            success: true,
+            message: `You are already part of this Hackathon (ID: ${currentHackathon.hackathonId})`,
+            data: currentHackathon,
+          });
+        } else {
+          // 🔹 Still active → block
+          return res.status(400).json({
+            success: false,
+            message: `You are already in another active Hackathon (ID: ${currentHackathon.hackathonId}). Leave it before joining a new one.`,
+          });
+        }
+      } else {
+        // 🔹 Cleanup orphaned currentHackathonId
+        user.currentHackathonId = null;
+        await user.save();
+      }
     }
 
     const hackathon = await Hackathon.findById(hackathonId);
@@ -319,21 +376,41 @@ export const joinHackathon = async (req, res) => {
       });
     }
 
-    if (!hackathon.isActive) {
+    // 🔹 Update status if outdated
+    const newStatus = determineHackathonStatus(hackathon);
+    if (hackathon.status !== newStatus) {
+      hackathon.status = newStatus;
+      await hackathon.save();
+    }
+
+    // 🔹 Check if hackathon is joinable
+    if (
+      hackathon.status === "registration_closed" ||
+      hackathon.status === "ongoing" ||
+      hackathon.status === "completed" ||
+      hackathon.status === "cancelled"
+    ) {
       return res.status(400).json({
         success: false,
-        message: "Hackathon is not active",
+        message: `Hackathon cannot be joined now. Current status: ${hackathon.status}`,
       });
     }
 
-    // update user
+    // 🔹 Check max registrations
+    if (
+      hackathon.maxRegistrations &&
+      hackathon.totalMembersJoined >= hackathon.maxRegistrations
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Hackathon has reached maximum registrations",
+      });
+    }
+
+    // 🔹 Add user to hackathon
     user.currentHackathonId = hackathon._id;
     await user.save();
 
-    // update hackathon participants
-    if (!hackathon.participants) {
-      hackathon.participants = [];
-    }
     hackathon.participants.push(user._id);
     hackathon.totalMembersJoined = hackathon.participants.length;
     await hackathon.save();

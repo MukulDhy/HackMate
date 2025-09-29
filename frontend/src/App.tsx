@@ -40,7 +40,7 @@ const AppContent: React.FC = () => {
       }
       setTimeout(() => {
         setIsBootstrapping(false); // 👈 only after token check is done
-      }, 7000);
+      }, 4000);
 
     };
 

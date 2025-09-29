@@ -260,7 +260,7 @@ const HackathonDetailsPage = () => {
 
     } catch (err) {
       console.error("Hackathon join/leave error:", err);
-      showError(err.response?.data?.message || "Failed to join/leave hackathon");
+      showError(err.message || "Failed to join/leave hackathon");
     } finally {
       setJoining(false);
     }

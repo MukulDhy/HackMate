@@ -15,7 +15,6 @@ import {
 import { motion } from 'framer-motion';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAppSelector, useAppDispatch } from '@/hooks/redux-hooks';
-// import { useTeamMessages, useOnlineUsers } from '@/hooks/websocketHooks';
 import { useUser } from '@/hooks/authHook';
 import { showWarning } from '@/components/ui/ToasterMsg';
 import { webSocketService } from '@/store';
@@ -23,9 +22,129 @@ import { changeConnect } from '@/store/slices/websocketSlice';
 import { fetchTeamMessages, fetchUserTeam } from '@/store/slices/teamSlice';
 import { Hackathon } from '@/types/hackathon';
 import { Check, CheckCheck } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+
+// Project Submission Popup Component
+interface ProjectSubmissionPopupProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (submission: { type: string; link: string; ppt?: string }) => void;
+}
+
+const ProjectSubmissionPopup: React.FC<ProjectSubmissionPopupProps> = ({ 
+  isOpen, 
+  onClose, 
+  onSubmit 
+}) => {
+  const [selectedType, setSelectedType] = useState('github');
+  const [link, setLink] = useState('');
+  const [pptLink, setPptLink] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!link.trim()) {
+      showWarning('Please provide a valid link', 'Submission Error');
+      return;
+    }
+
+    onSubmit({
+      type: selectedType,
+      link: link.trim(),
+      ppt: pptLink.trim() || undefined
+    });
+    
+    // Reset form
+    setLink('');
+    setPptLink('');
+    setSelectedType('github');
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-background border border-border rounded-lg p-6 w-full max-w-md"
+      >
+        <h2 className="text-xl font-semibold mb-4">Submit Project</h2>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Submission Type */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Submission Type</label>
+            <select
+              value={selectedType}
+              onChange={(e) => setSelectedType(e.target.value)}
+              className="w-full p-2 border border-border rounded-md bg-background"
+            >
+              <option value="github">GitHub Repository</option>
+              <option value="drive">Drive Link</option>
+              <option value="other">Other Link</option>
+            </select>
+          </div>
+
+          {/* Main Link */}
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              {selectedType === 'github' ? 'GitHub Repository URL' : 
+               selectedType === 'drive' ? 'Google Drive Link' : 'Project Link'}
+            </label>
+            <input
+              type="url"
+              value={link}
+              onChange={(e) => setLink(e.target.value)}
+              placeholder={
+                selectedType === 'github' ? 'https://github.com/username/repo' :
+                selectedType === 'drive' ? 'https://drive.google.com/...' :
+                'https://your-project-link.com'
+              }
+              className="w-full p-2 border border-border rounded-md bg-background"
+              required
+            />
+          </div>
+
+          {/* Optional PPT Link */}
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Presentation Slides (Optional)
+            </label>
+            <input
+              type="url"
+              value={pptLink}
+              onChange={(e) => setPptLink(e.target.value)}
+              placeholder="https://drive.google.com/... or PPT link"
+              className="w-full p-2 border border-border rounded-md bg-background"
+            />
+          </div>
+
+          {/* Buttons */}
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 py-2 px-4 border border-border rounded-md hover:bg-muted transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="flex-1 py-2 px-4 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+            >
+              Submit
+            </button>
+          </div>
+        </form>
+      </motion.div>
+    </div>
+  );
+};
 
 export default function TeamChat() {
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
   const { currentUser } = useAppSelector((state) => state.team);
   const { hackathon } = useAppSelector((state) => state.userHack);
   const teamData = useAppSelector((state) => state.team);
@@ -33,22 +152,55 @@ export default function TeamChat() {
   const teamId = teamData.team?._id || '';
   const teamMembers = teamData.members || [];
   
-  const messages= useAppSelector((state) => state.team.messages);
+  const messages = useAppSelector((state) => state.team.messages);
   const messagesLoading = useAppSelector((state) => state.team.messageLoading);
   const onlineUsers = useAppSelector((state) => state.team.onlineUsers);
   const [newMessage, setNewMessage] = useState<string>('');
   const timeLeft = useAppSelector((state) => state?.userHack?.hackathon?.endDate);
   const [isConnecting, setIsConnecting] = useState(true);
   const [isDataLoading, setIsDataLoading] = useState(true);
+  const [showSubmissionPopup, setShowSubmissionPopup] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // WebSocket connection and presence update
+  // Check if all required data is loaded
+  const isDataLoaded = useCallback(() => {
+    return (
+      !isConnecting &&
+      !isDataLoading &&
+      !messagesLoading &&
+      hackathon &&
+      teamData.team &&
+      teamMembers.length > 0 &&
+      user
+    );
+  }, [isConnecting, isDataLoading, messagesLoading, hackathon, teamData.team, teamMembers, user]);
+
+  // Navigate if data doesn't load after timeout
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (!isDataLoaded()) {
+        showWarning('Unable to load team data. Redirecting...', 'Loading Error');
+        navigate('/dashboard'); // or your fallback route
+      }
+    }, 10000); // 10 seconds timeout
+
+    return () => clearTimeout(timeoutId);
+  }, [isDataLoaded, navigate]);
+
+  // WebSocket connection and data loading
   useEffect(() => {
     const initializeWebSocket = async () => {
       try {
         setIsConnecting(true);
-        
+        setIsDataLoading(true);
+
+        // Check if user is authenticated
+        if (!user) {
+          navigate('/login');
+          return;
+        }
+
         // Connect to WebSocket if not already connected
         const token = localStorage.getItem('token') || user?.token;
         if (token && !webSocketService.isConnected) {
@@ -56,37 +208,48 @@ export default function TeamChat() {
           dispatch(changeConnect({ changeStatus: true }));
         }
 
-        // Simulate data loading delay
-        setTimeout(() => {
-          setIsDataLoading(false);
-          setIsConnecting(false);
-        }, 1500);
+        // Fetch team data
+        if (user?._id && user?.currentHackathonId) {
+          await dispatch(fetchUserTeam({ 
+            userId: user._id, 
+            hackathonId: user.currentHackathonId 
+          })).unwrap();
+          
+          if (teamId) {
+            await dispatch(fetchTeamMessages({ teamId })).unwrap();
+          }
+        }
 
       } catch (error) {
-        console.error('Failed to initialize WebSocket:', error);
+        console.error('Failed to initialize:', error);
+        showWarning('Failed to load team data', 'Error');
+        navigate('/dashboard');
+      } finally {
         setIsConnecting(false);
         setIsDataLoading(false);
       }
     };
 
     initializeWebSocket();
-    if (user?._id && user?.currentHackathonId) {
-      dispatch(fetchUserTeam({ userId: user._id, hackathonId: user.currentHackathonId }));
-      // dispatch(changeConnect({ changeStatus: true }));
-      if (teamId !== undefined && teamId !== '') {
-        dispatch(fetchTeamMessages({ teamId }));
-      }
-    }
-
-    return () => {
-      // Cleanup if needed
-    };
-  }, [teamId, currentUser, user, dispatch]);
+  }, [teamId, user, dispatch, navigate]);
 
   const handleRefresh = () => {
-    // Refresh logic here
+    window.location.reload();
   };
 
+  const handleProjectSubmit = (submission: { 
+    type: string; 
+    link: string; 
+    ppt?: string 
+  }) => {
+    // Handle project submission logic here
+    console.log('Project submitted:', submission);
+    // You can dispatch an action to save the submission
+    showWarning('Project submitted successfully!', 'Submission Complete');
+  };
+  const onSubmissionClick = ()  => {
+    setShowSubmissionPopup(true);
+  }
   // Safely create hackathonData with fallback values
   const hackathonData: Hackathon = {
     title: hackathon?.title || 'AI Innovation Challenge',
@@ -153,13 +316,11 @@ export default function TeamChat() {
     // Send message via WebSocket
     webSocketService.sendTeamMessage(teamId, newMessage.trim());
     setNewMessage('');
-    // inputRef.current?.focus();
-    // inputRef.current?.scrollIntoView({ behavior: 'smooth' });
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Show loading state
-  if (isConnecting || isDataLoading) {
+  // Show loading state until all data is available
+  if (!isDataLoaded()) {
     return (
       <PageLayout showBackground={true} className="bg-background">
         <div className="min-h-screen p-4 xs:p-5 sm:p-6">
@@ -234,57 +395,67 @@ export default function TeamChat() {
   }
 
   return (
-    <PageLayout showBackground={true} className="bg-background">
-      <div className="min-h-screen p-4 xs:p-5 sm:p-6">
-        <TeamChatHeader 
-          hackathonTitle={hackathonData.title}
-          timeLeft={timeLeft}
-          onRefresh={handleRefresh}
-        />
+    <>
+      <PageLayout showBackground={true} className="bg-background">
+        <div className="min-h-screen p-4 xs:p-5 sm:p-6">
+          <TeamChatHeader 
+            hackathonTitle={hackathonData.title}
+            timeLeft={timeLeft}
+            onRefresh={handleRefresh}
+          />
 
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 xs:gap-5 sm:gap-6">
-          {/* Main Content */}
-          <div className="xl:col-span-2 space-y-4 xs:space-y-5 sm:space-y-6">
-            <HackathonDetails 
-              hackathonData={hackathonData}
-              formatDate={formatDate}
-            />
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 xs:gap-5 sm:gap-6">
+            {/* Main Content */}
+            <div className="xl:col-span-2 space-y-4 xs:space-y-5 sm:space-y-6">
+              <HackathonDetails 
+                hackathonData={hackathonData}
+                formatDate={formatDate}
+              />
 
-            <ProblemStatements problemStatements={hackathonData.problemStatements} />
+              <ProblemStatements problemStatements={hackathonData.problemStatements} />
 
-            <TeamChatMessages
-              messages={messages}
-              messagesLoading={messagesLoading}
-              teamMembers={teamMembers}
-              currentUser={currentUser}
-              newMessage={newMessage}
-              setNewMessage={setNewMessage}
-              handleSendMessage={handleSendMessage}
-              formatDate={formatDate}
-              getStatusIcon={getStatusIcon}
-              inputRef={inputRef}
-              chatEndRef={chatEndRef}
-            />
-          </div>
+              <TeamChatMessages
+                messages={messages}
+                messagesLoading={messagesLoading}
+                teamMembers={teamMembers}
+                currentUser={currentUser}
+                newMessage={newMessage}
+                setNewMessage={setNewMessage}
+                handleSendMessage={handleSendMessage}
+                formatDate={formatDate}
+                getStatusIcon={getStatusIcon}
+                inputRef={inputRef}
+                chatEndRef={chatEndRef}
+              />
+            </div>
 
-          {/* Sidebar */}
-          <div className="space-y-4 xs:space-y-5 sm:space-y-6">
-            <TeamMembers
-              teamMembers={teamMembers}
-              currentUser={currentUser}
-              onlineUsers={onlineUsers}
-              teamName={teamData.teamName || 'Your Team'}
-              maxTeamSize={hackathonData.maxTeamSize}
-            />
+            {/* Sidebar */}
+            <div className="space-y-4 xs:space-y-5 sm:space-y-6">
+              <TeamMembers
+                teamMembers={teamMembers}
+                currentUser={currentUser}
+                onlineUsers={onlineUsers}
+                teamName={teamData.teamName || 'Your Team'}
+                maxTeamSize={hackathonData.maxTeamSize}
+              />
 
-            <ProjectSubmission
-              submissionDeadline={hackathonData.submissionDeadline}
-              submissionFormat={hackathonData.submissionFormat}
-              formatDate={formatDate}
-            />
+              <ProjectSubmission
+                submissionDeadline={hackathonData.submissionDeadline}
+                submissionFormat={hackathonData.submissionFormat}
+                formatDate={formatDate}
+                onSubmissionClick={() => setShowSubmissionPopup(true)}
+              />
+            </div>
           </div>
         </div>
-      </div>
-    </PageLayout>
+      </PageLayout>
+
+      {/* Project Submission Popup */}
+      <ProjectSubmissionPopup
+        isOpen={showSubmissionPopup}
+        onClose={() => setShowSubmissionPopup(false)}
+        onSubmit={handleProjectSubmit}
+      />
+    </>
   );
 }

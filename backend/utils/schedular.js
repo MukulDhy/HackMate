@@ -130,7 +130,7 @@ const createTeamsForHackathon = async (hackathon, io) => {
     } = hackathon;
 
     // Validation checks - FIXED: Use participants array directly
-      if (!participants || participants.length === 0) {
+    if (!participants || participants.length === 0) {
       logger.info(`No participants for hackathon: ${title}`);
       return false;
     }
@@ -518,7 +518,7 @@ const completeHackathon = async (hackathon, io) => {
 export const startScheduler = (io) => {
   // Team formation scheduler (runs every minute)
   cron.schedule(
-    "* * * * *",
+    "*/30 * * * * *",
     async () => {
       const marker = {
         status: "started",
@@ -532,6 +532,8 @@ export const startScheduler = (io) => {
         const now = new Date();
         const twoMinutesAgo = new Date(now.getTime() - 2 * 60000);
         // FIXED: Find hackathons where registration deadline has passed
+        // const hak = await Hackathon.find({});
+        // console.log("All hackathons:", hak);
         const hackathonsToProcess = await Hackathon.find({
           registrationDeadline: { $lte: now, $gte: twoMinutesAgo },
           isActive: true,
