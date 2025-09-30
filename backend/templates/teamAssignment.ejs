@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Team Assignment Notification</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        margin: 0;
+        padding: 0;
+        background-color: #f4f4f4;
+      }
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        background-color: #ffffff;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+      .header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px 20px;
+        text-align: center;
+      }
+      .header h1 {
+        margin: 0;
+        font-size: 28px;
+        font-weight: 600;
+      }
+      .content {
+        padding: 30px;
+      }
+      .greeting {
+        font-size: 18px;
+        margin-bottom: 20px;
+        color: #555;
+      }
+      .team-info {
+        background-color: #f8f9fa;
+        border-left: 4px solid #667eea;
+        padding: 20px;
+        margin: 25px 0;
+        border-radius: 0 8px 8px 0;
+      }
+      .team-name {
+        font-size: 22px;
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 10px;
+      }
+      .hackathon-title {
+        font-size: 20px;
+        color: #667eea;
+        margin-bottom: 15px;
+        font-weight: 600;
+      }
+      .section {
+        margin-bottom: 25px;
+      }
+      .section-title {
+        font-size: 16px;
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 10px;
+        border-bottom: 2px solid #f0f0f0;
+        padding-bottom: 5px;
+      }
+      .teammates-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+      .teammate-item {
+        background-color: #f8f9fa;
+        padding: 12px 15px;
+        margin-bottom: 8px;
+        border-radius: 6px;
+        border-left: 3px solid #28a745;
+      }
+      .problem-statement {
+        background-color: #e3f2fd;
+        padding: 20px;
+        border-radius: 8px;
+        border: 1px solid #bbdefb;
+        font-style: italic;
+        color: #1565c0;
+      }
+      .next-steps {
+        background-color: #fff3cd;
+        padding: 20px;
+        border-radius: 8px;
+        border: 1px solid #ffeaa7;
+        margin-top: 25px;
+      }
+      .next-steps h3 {
+        color: #856404;
+        margin-top: 0;
+      }
+      .next-steps ul {
+        margin-bottom: 0;
+        padding-left: 20px;
+      }
+      .next-steps li {
+        margin-bottom: 8px;
+      }
+      .footer {
+        background-color: #f8f9fa;
+        padding: 20px;
+        text-align: center;
+        color: #6c757d;
+        font-size: 14px;
+        border-top: 1px solid #dee2e6;
+      }
+      .highlight {
+        background-color: #fff3cd;
+        padding: 3px 6px;
+        border-radius: 3px;
+        font-weight: 500;
+      }
+      .badge {
+        display: inline-block;
+        padding: 4px 8px;
+        background-color: #667eea;
+        color: white;
+        border-radius: 12px;
+        font-size: 12px;
+        margin-left: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <!-- Header -->
+      <div class="header">
+        <h1>🎯 Team Assignment</h1>
+        <p>You've been assigned to a team!</p>
+      </div>
+
+      <!-- Main Content -->
+      <div class="content">
+        <!-- Greeting -->
+        <div class="greeting">Hello <strong><%= name %></strong>,</div>
+
+        <p>
+          We're excited to inform you that you've been assigned to a team for
+          the upcoming hackathon. Here are your team details:
+        </p>
+
+        <!-- Team Information -->
+        <div class="team-info">
+          <div class="hackathon-title">🏆 <%= hackathonTitle %></div>
+          <div class="team-name">👥 <%= teamName %></div>
+        </div>
+
+        <!-- Teammates Section -->
+        <div class="section">
+          <div class="section-title">🤝 Your Teammates</div>
+          <ul class="teammates-list">
+            <% teammates.forEach((teammate, index) => { %>
+            <li class="teammate-item">
+              <%= teammate %> <% if (index === 0) { %>
+              <span class="badge">Team Lead</span>
+              <% } %>
+            </li>
+            <% }); %>
+          </ul>
+        </div>
+
+        <!-- Problem Statement -->
+        <div class="section">
+          <div class="section-title">💡 Your Challenge</div>
+          <div class="problem-statement">"<%= problemStatement %>"</div>
+        </div>
+
+        <!-- Next Steps -->
+        <div class="next-steps">
+          <h3>🚀 Next Steps</h3>
+          <ul>
+            <li>
+              <strong>Connect with your team</strong> - Reach out to your
+              teammates as soon as possible
+            </li>
+            <li>
+              <strong>Plan your approach</strong> - Discuss the problem
+              statement and brainstorm solutions
+            </li>
+            <li>
+              <strong>Set up collaboration tools</strong> - Choose your
+              preferred communication and development tools
+            </li>
+            <li>
+              <strong>Review hackathon rules</strong> - Make sure you understand
+              the submission requirements and timeline
+            </li>
+            <li>
+              <strong>Prepare your development environment</strong> - Get your
+              tools and workspace ready
+            </li>
+          </ul>
+        </div>
+
+        <!-- Closing Remarks -->
+        <div class="section">
+          <p style="text-align: center; font-size: 16px; color: #555">
+            <strong>Good luck and happy hacking! 🚀</strong>
+          </p>
+          <p style="text-align: center; color: #666">
+            If you have any questions or need assistance, please contact the
+            hackathon organizers.
+          </p>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="footer">
+        <p>
+          This is an automated notification. Please do not reply to this email.
+        </p>
+        <p>
+          © <%= new Date().getFullYear() %> Hackathon Platform. All rights
+          reserved.
+        </p>
+      </div>
+    </div>
+  </body>
+</html>

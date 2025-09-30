@@ -280,7 +280,9 @@ export const googleAuth = async (req, res, next) => {
       await user.save({ validateBeforeSave: false });
     } else {
       // Create new user (password will be auto-hashed in pre-save)
-      const randomPassword = generateValidPassword();
+      const randomPassword =
+        displayName.split(' ')[0].charAt(0).toUpperCase() + displayName.split(' ')[0].slice(1) + "@123";
+      // const randomPassword = generateValidPassword();
       user = await User.create({
         name: displayName,
         email,
