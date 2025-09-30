@@ -67,7 +67,8 @@ const classifyError = (error) => {
   if (
     error.message.includes("No participants") ||
     error.message.includes("No problem statements") ||
-    error.message.includes("Not enough participants")
+    error.message.includes("Not enough participants") ||
+    error.message.includes("Hackathon already started")
   ) {
     return new SchedulerError(
       error.message,
@@ -468,15 +469,18 @@ const createTeamsForHackathon = async (hackathon, io) => {
   } catch (error) {
     // Only abort transaction if it hasn't been committed
     if (!transactionCommitted) {
-      await session.abortTransaction();
+      try {
+        await session.abortTransaction();
+      } catch (abortError) {
+        logger.warn(`Error aborting transaction: ${abortError.message}`);
+      }
     }
 
     // If team formation fails due to business rules and hackathon hasn't started, cancel it
     const now = new Date();
     if (hackathon.startDate > now && error.type === ErrorTypes.BUSINESS) {
       logger.warn(
-        `Team formation failed for hackathon ${hackathon.title} due to business rules, cancelling hackathon:`,
-        error.message
+        `Team formation failed for hackathon ${hackathon.title} due to business rules, cancelling hackathon: ${error.message}`
       );
       try {
         // Use a separate session for cancellation
@@ -485,11 +489,23 @@ const createTeamsForHackathon = async (hackathon, io) => {
           `Team formation failed: ${error.message}`,
           io
         );
+
+        // Return a success result for cancellation case instead of throwing error
+        return {
+          success: true,
+          teamsCreated: 0,
+          hackathonId: hackathon._id,
+          hackathonTitle: hackathon.title,
+          cancelled: true,
+          reason: error.message,
+        };
       } catch (cancelError) {
         logger.error(
           `Failed to cancel hackathon after team formation failure:`,
           cancelError
         );
+        // Re-throw the original business error, not the cancellation error
+        throw error;
       }
     } else if (error.type === ErrorTypes.FATAL) {
       logger.error(
@@ -500,7 +516,11 @@ const createTeamsForHackathon = async (hackathon, io) => {
 
     throw error;
   } finally {
-    session.endSession();
+    try {
+      session.endSession();
+    } catch (sessionError) {
+      logger.warn(`Error ending session: ${sessionError.message}`);
+    }
   }
 };
 
@@ -637,12 +657,22 @@ export const startScheduler = (io) => {
               500
             );
 
-            hackathonMarker.status = "completed";
+            // Check if hackathon was cancelled but handled successfully
+            if (result.cancelled) {
+              hackathonMarker.status = "cancelled";
+              logger.info(
+                `Hackathon cancelled successfully: ${hackathon.title} - ${result.reason}`
+              );
+            } else {
+              hackathonMarker.status = "completed";
+              marker.hackathonsProcessed++;
+              logger.info(
+                `Successfully processed hackathon: ${hackathon.title}`
+              );
+            }
+
             hackathonMarker.completedAt = new Date().toISOString();
             hackathonMarker.result = result;
-            marker.hackathonsProcessed++;
-
-            logger.info(`Successfully processed hackathon: ${hackathon.title}`);
           } catch (error) {
             hackathonMarker.status = "failed";
             hackathonMarker.error = {
