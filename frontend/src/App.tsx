@@ -24,6 +24,7 @@ import { userFetchHackathon } from './store/slices/userCurrrentHacthon';
 // import TeamAssignment from './pages/TeamAssignment';
 import TeamChat from './pages/TeamChat';
 import Loader from './components/ui/Loader';
+import HackMateDonationPage from './pages/Donation';
 
 
 const AppContent: React.FC = () => {
@@ -104,6 +105,10 @@ const AppContent: React.FC = () => {
                    <Route 
                     path="/team" 
                     element={<TeamChat></TeamChat>} 
+                  />
+                   <Route 
+                    path="/donation" 
+                    element={<HackMateDonationPage></HackMateDonationPage>} 
                   />
                   <Route path="/forgot-password" element={<ForgotPassword />} />
                   <Route path="/feedback" element={<FeedbackForm />} />

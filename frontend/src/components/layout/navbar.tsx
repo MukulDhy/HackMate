@@ -12,7 +12,7 @@ const navItems = [
   { name: 'Dashboard', path: '/dashboard' },
   { name: 'Lobbies', path: '/lobbies' },
   { name: 'Teams', path: '/teams' },
-  { name: 'Analytics', path: '/analytics' },
+  { name: 'Donation', path: '/donation' },
 ];
 
 const publicNavItems = [
