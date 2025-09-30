@@ -41,7 +41,7 @@ const AppContent: React.FC = () => {
       }
       setTimeout(() => {
         setIsBootstrapping(false); // 👈 only after token check is done
-      }, 4000);
+      }, 5000);
 
     };
 
@@ -58,7 +58,7 @@ const AppContent: React.FC = () => {
     if (isBootstrapping || isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader />
+        <Loader  />
       </div>
     );
   }

@@ -40,20 +40,20 @@ const defaultSettingsData = {
         website: 'https://alexdev.com',
         avatar: '/placeholder-avatar.jpg',
     },
-    notifications: {
-        hackathonInvites: true,
-        teamFormation: true,
-        projectUpdates: false,
-        achievements: true,
-        newsletter: false,
-        marketing: false,
-    },
+    // notifications: {
+    //     hackathonInvites: true,
+    //     teamFormation: true,
+    //     projectUpdates: false,
+    //     achievements: true,
+    //     newsletter: false,
+    //     marketing: false,
+    // },
     privacy: {
-        profileVisibility: 'public',
-        showEmail: false,
-        showPhone: false,
-        showStats: true,
-        allowDirectMessages: true,
+        // profileVisibility: 'public',
+        showEmail: true,
+        showPhone: true,
+        // showStats: true,
+        // allowDirectMessages: true,
     },
     social: {
         github: 'alexrodriguez',
@@ -79,7 +79,7 @@ export default function Settings() {
 
     const tabs = [
         { id: 'profile', label: 'Profile', icon: User },
-        { id: 'notifications', label: 'Notifications', icon: Bell },
+        // { id: 'notifications', label: 'Notifications', icon: Bell },
         { id: 'privacy', label: 'Privacy & Security', icon: Shield },
         { id: 'appearance', label: 'Appearance', icon: Palette },
         { id: 'social', label: 'Social Links', icon: Globe },
@@ -338,16 +338,16 @@ export default function Settings() {
                                     {key.replace(/([A-Z])/g, ' $1').trim()}
                                 </h4>
                                 <p className="text-sm text-muted-foreground">
-                                    {key === 'profileVisibility' &&
-                                        'Control who can see your profile'}
+                                    {/* {key === 'profileVisibility' &&
+                                        'Control who can see your profile'} */}
                                     {key === 'showEmail' &&
-                                        'Display email address on your public profile'}
-                                    {key === 'showPhone' &&
-                                        'Display phone number on your public profile'}
-                                    {key === 'showStats' &&
-                                        'Show your statistics and achievements publicly'}
-                                    {key === 'allowDirectMessages' &&
-                                        'Allow other users to send you direct messages'}
+                                        'Display email address on During your hackathons going online'}
+                                    {key === 'showPhone' && 
+                                        'Display phone number on During your hackathons going online'}
+                                    {/* {key === 'showStats' &&
+                                        'Show your statistics and achievements publicly'} */}
+                                    {/* {key === 'allowDirectMessages' &&
+                                        'Allow other users to send you direct messages'} */}
                                 </p>
                             </div>
                             <Switch
@@ -458,7 +458,7 @@ export default function Settings() {
                 </div>
             </GlassCard>
 
-            <GlassCard className="p-6">
+            {/* <GlassCard className="p-6">
                 <h3 className="font-orbitron font-bold text-lg text-foreground mb-4">
                     Display Preferences
                 </h3>
@@ -499,7 +499,7 @@ export default function Settings() {
                         <Switch />
                     </div>
                 </div>
-            </GlassCard>
+            </GlassCard> */}
         </div>
     );
 
@@ -661,8 +661,8 @@ export default function Settings() {
                             </div>
 
                             {activeTab === 'profile' && renderProfileTab()}
-                            {activeTab === 'notifications' &&
-                                renderNotificationsTab()}
+                            {/* {activeTab === 'notifications' &&
+                                renderNotificationsTab()} */}
                             {activeTab === 'privacy' && renderPrivacyTab()}
                             {activeTab === 'appearance' &&
                                 renderAppearanceTab()}

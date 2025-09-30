@@ -295,7 +295,7 @@ export default function Teams() {
         </motion.div>
 
         {/* Past Teams */}
-        <motion.div
+        {/* <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
@@ -370,10 +370,10 @@ export default function Teams() {
               </motion.div>
             ))}
           </div>
-        </motion.div>
+        </motion.div> */}
 
         {/* Team Formation Tips */}
-        <motion.div
+        {/* <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
@@ -393,7 +393,7 @@ export default function Teams() {
               </Button>
             </div>
           </GlassCard>
-        </motion.div>
+        </motion.div> */}
       </div>
     </div>
   );

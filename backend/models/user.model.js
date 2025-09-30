@@ -105,7 +105,10 @@ const userSchema = new mongoose.Schema(
           "Please provide a valid LinkedIn URL (https://linkedin.com/in/username)",
       },
     },
-
+    twitter: {
+      type: String,
+      trim: true,
+    },
     phone: {
       type: String,
       trim: true,
@@ -119,6 +122,15 @@ const userSchema = new mongoose.Schema(
         },
         message: "Please provide a valid phone number",
       },
+    },
+    collegeName: {
+      type: String,
+      trim: true,
+      maxlength: [100, "College name cannot exceed 100 characters"],
+    },
+    website: {
+      type: String,
+      trim: true,
     },
 
     profilePicture: {
@@ -158,7 +170,11 @@ const userSchema = new mongoose.Schema(
       required: true,
       default: "user",
     },
-
+    bio: {
+      type: String,
+      trim: true,
+      maxlength: 500,
+    },
     resetPasswordToken: String,
     resetPasswordExpires: Date,
   },
