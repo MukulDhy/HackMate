@@ -12,7 +12,7 @@ import { useAppDispatch, useAppSelector, useUser } from '@/hooks/authHook';
 import { showError, showSuccess } from '@/components/ui/ToasterMsg';
 import { joinHackathon, leaveHackathon } from '@/store/slices/userCurrrentHacthon';
 
-// Countdown Timer Component
+// Countdown Timer Component (unchanged)
 const CountdownTimer = ({ targetDate, label, onComplete, onStartTimeReached }) => {
   const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
 
@@ -84,8 +84,8 @@ const HackathonDetailsPage = () => {
   const userhack = useAppSelector((state) => state.userHack);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-    const { user, isAuthenticated } = useUser();
-  const [isJoined, setIsJoined] = useState( (userhack.joined && userhack.hackathon._id === user.currentHackathonId ) || false);
+  const { user, isAuthenticated } = useUser();
+  const [isJoined, setIsJoined] = useState(false); // Fixed: Initialize as false
   const [joining, setJoining] = useState(false);
   const [hackathonState, setHackathonState] = useState({
     canJoin: false,
@@ -99,7 +99,6 @@ const HackathonDetailsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-
 
   // Calculate hackathon state based on dates
   const calculateHackathonState = (data) => {
@@ -150,7 +149,6 @@ const HackathonDetailsPage = () => {
 
     return state;
   };
-
 
   useEffect(() => {
     fetchHackathonData();
@@ -206,7 +204,14 @@ const HackathonDetailsPage = () => {
       if (response.data.success) {
         console.log('Hackathon data:', response.data.data);
         setHackathonData(response.data.data);
-        setIsJoined( (userhack.joined && userhack.hackathon._id === user.currentHackathonId ) || false)
+        
+        // FIXED: Properly check if user has joined THIS specific hackathon
+        const userJoinedThisHackathon = 
+          userhack.joined && 
+          userhack.hackathon && 
+          userhack.hackathon._id === id;
+        
+        setIsJoined(userJoinedThisHackathon);
       } else {
         setError(response.data.message || 'Failed to fetch hackathon');
       }
@@ -246,7 +251,10 @@ const HackathonDetailsPage = () => {
         }
         await dispatch(leaveHackathon(id)).unwrap();
         setIsJoined(false);
-        setHackathonData((prev) => ({ ...prev, totalMembersJoined: Math.max((prev?.totalMembersJoined || 1) - 1, 0) }));
+        setHackathonData((prev) => ({ 
+          ...prev, 
+          totalMembersJoined: Math.max((prev?.totalMembersJoined || 1) - 1, 0) 
+        }));
         showSuccess("Successfully left hackathon");
       } else {
         if (!hackathonState.canJoin) {
@@ -255,7 +263,10 @@ const HackathonDetailsPage = () => {
         }
         await dispatch(joinHackathon(id)).unwrap();
         setIsJoined(true);
-        setHackathonData((prev) => ({ ...prev, totalMembersJoined: (prev?.totalMembersJoined || 0) + 1 }));
+        setHackathonData((prev) => ({ 
+          ...prev, 
+          totalMembersJoined: (prev?.totalMembersJoined || 0) + 1 
+        }));
         showSuccess("Successfully joined hackathon");
       }
 
@@ -266,7 +277,6 @@ const HackathonDetailsPage = () => {
       setJoining(false);
     }
   };
-
   const formatDate = (dateString) => {
     if (!dateString) return 'Not specified';
     const date = new Date(dateString);

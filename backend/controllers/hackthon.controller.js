@@ -328,11 +328,20 @@ export const joinHackathon = async (req, res) => {
       });
     }
 
+    // 🔹 Check if user is already in THIS hackathon
+    if (String(user.currentHackathonId) === String(hackathonId)) {
+      return res.status(400).json({
+        success: false,
+        message: "You have already joined this hackathon",
+      });
+    }
+
+    // 🔹 Check if user is in another active hackathon
     if (user.currentHackathonId !== null) {
       const currentHackathon = await Hackathon.findById(
         user.currentHackathonId
       );
-      console.log("Current Hackathon:", currentHackathon);
+
       if (currentHackathon) {
         const currentStatus = determineHackathonStatus(currentHackathon);
         if (currentHackathon.status !== currentStatus) {
@@ -340,29 +349,25 @@ export const joinHackathon = async (req, res) => {
           await currentHackathon.save();
         }
 
+        // If current hackathon is still active, block joining new one
         if (
+          currentHackathon.status === "registration_open" ||
+          currentHackathon.status === "ongoing"
+        ) {
+          return res.status(400).json({
+            success: false,
+            message: `You are already in an active hackathon: ${currentHackathon.name}. Leave it before joining a new one.`,
+          });
+        } else if (
           currentHackathon.status === "completed" ||
           currentHackathon.status === "cancelled"
         ) {
-          // 🔹 User's hackathon ended → reset
+          // Clean up completed/cancelled hackathon
           user.currentHackathonId = null;
           await user.save();
-        } else if (String(user.currentHackathonId) === String(hackathonId)) {
-          // 🔹 Already in this hackathon
-          return res.status(200).json({
-            success: true,
-            message: `You are already part of this Hackathon (ID: ${currentHackathon.hackathonId})`,
-            data: currentHackathon,
-          });
-        } else {
-          // 🔹 Still active → block
-          return res.status(400).json({
-            success: false,
-            message: `You are already in another active Hackathon (ID: ${currentHackathon.hackathonId}). Leave it before joining a new one.`,
-          });
         }
       } else {
-        // 🔹 Cleanup orphaned currentHackathonId
+        // Cleanup orphaned currentHackathonId
         user.currentHackathonId = null;
         await user.save();
       }
@@ -376,6 +381,14 @@ export const joinHackathon = async (req, res) => {
       });
     }
 
+    // 🔹 Check if user is already in participants list (additional safety check)
+    if (hackathon.participants.includes(user._id)) {
+      return res.status(400).json({
+        success: false,
+        message: "You have already joined this hackathon",
+      });
+    }
+
     // 🔹 Update status if outdated
     const newStatus = determineHackathonStatus(hackathon);
     if (hackathon.status !== newStatus) {
@@ -384,12 +397,7 @@ export const joinHackathon = async (req, res) => {
     }
 
     // 🔹 Check if hackathon is joinable
-    if (
-      hackathon.status === "registration_closed" ||
-      hackathon.status === "ongoing" ||
-      hackathon.status === "completed" ||
-      hackathon.status === "cancelled"
-    ) {
+    if (hackathon.status !== "registration_open") {
       return res.status(400).json({
         success: false,
         message: `Hackathon cannot be joined now. Current status: ${hackathon.status}`,
@@ -411,9 +419,12 @@ export const joinHackathon = async (req, res) => {
     user.currentHackathonId = hackathon._id;
     await user.save();
 
-    hackathon.participants.push(user._id);
-    hackathon.totalMembersJoined = hackathon.participants.length;
-    await hackathon.save();
+    // Add user to participants if not already there
+    if (!hackathon.participants.includes(user._id)) {
+      hackathon.participants.push(user._id);
+      hackathon.totalMembersJoined = hackathon.participants.length;
+      await hackathon.save();
+    }
 
     return res.status(200).json({
       success: true,
@@ -461,25 +472,43 @@ export const leaveHackathon = async (req, res) => {
     if (user.currentHackathonId.toString() !== hackathonId) {
       return res.status(400).json({
         success: false,
-        message: `You are currently in a different hackathon: ${user.currentHackathonId}`,
+        message: "You are not part of this hackathon",
       });
     }
 
     const hackathon = await Hackathon.findById(hackathonId);
     if (!hackathon) {
+      // Clean up the user's currentHackathonId since the hackathon doesn't exist
+      user.currentHackathonId = null;
+      await user.save();
+      
       return res.status(404).json({
         success: false,
         message: "Hackathon not found",
       });
     }
 
-    // Remove user from participants
-    hackathon.participants = hackathon.participants.filter(
-      (participantId) => participantId.toString() !== user._id.toString()
+    // Check if hackathon allows leaving (optional - based on your business logic)
+    const hackathonStatus = determineHackathonStatus(hackathon);
+    if (hackathonStatus === "ongoing" || hackathonStatus === "completed") {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot leave hackathon while it is ${hackathonStatus}`,
+      });
+    }
+
+    // Remove user from participants if they exist in the list
+    const wasParticipant = hackathon.participants.some(
+      (participantId) => participantId.toString() === user._id.toString()
     );
 
-    hackathon.totalMembersJoined = hackathon.participants.length;
-    await hackathon.save();
+    if (wasParticipant) {
+      hackathon.participants = hackathon.participants.filter(
+        (participantId) => participantId.toString() !== user._id.toString()
+      );
+      hackathon.totalMembersJoined = hackathon.participants.length;
+      await hackathon.save();
+    }
 
     // Clear user's current hackathon
     user.currentHackathonId = null;
@@ -488,7 +517,11 @@ export const leaveHackathon = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Successfully left hackathon",
-      data: hackathon,
+      data: {
+        hackathonId: hackathon._id,
+        hackathonName: hackathon.name,
+        totalMembersJoined: hackathon.totalMembersJoined
+      },
     });
   } catch (error) {
     console.error("Leave hackathon error:", error);
