@@ -8,7 +8,7 @@ import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
-import Lobbies from "./pages/Lobbies";
+import Lobbies from "./pages/Lobbies2";
 import Teams from "./pages/Teams";
 import Profile from "./pages/Profile";
 import Analytics from "./pages/Analytics";

@@ -17,7 +17,7 @@ const Loader: React.FC<LoaderProps> = ({ duration = 5000 }) => {
 
   return (
     <div className={`loader-container ${zoomOut ? "zoom-out" : ""}`}>
-      <h1 className="loader">HackMate</h1>
+      <h1 className="loader">HackMate 2k25</h1>
     </div>
   );
 };
