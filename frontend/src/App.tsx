@@ -69,7 +69,7 @@ const AppContent: React.FC = () => {
           
           <Router><ScrollToTop />
             <div className="min-h-screen  text-foreground">
-              {/* <BackgroundScene className="absolute inset-0 w-full h-full" /> */}
+              <BackgroundScene className="absolute inset-0 w-full h-full" />
               <Navbar />
               <main className="pt-20">
                 <Routes>

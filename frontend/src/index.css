@@ -51,8 +51,8 @@
 @layer base {
   :root {
     /* Core Cyberpunk Colors - Dark Mode */
-    --background: 240 10% 3.9%;           /* Deep dark background */
-    --background-secondary: 240 8% 8%;     /* Slightly lighter background */
+    --background: 240 10% 3.9%;    
+    --background-secondary: 240;     
     --foreground: 210 40% 98%;             /* Bright text */
 
     /* Glass morphism surfaces */
