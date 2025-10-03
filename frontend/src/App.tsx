@@ -25,6 +25,7 @@ import { userFetchHackathon } from './store/slices/userCurrrentHacthon';
 import TeamChat from './pages/TeamChat';
 import Loader from './components/ui/Loader';
 import HackMateDonationPage from './pages/Donation';
+import { BackgroundScene } from './components/3d/background-scene';
 
 
 const AppContent: React.FC = () => {
@@ -67,7 +68,8 @@ const AppContent: React.FC = () => {
 
           
           <Router><ScrollToTop />
-            <div className="min-h-screen bg-background text-foreground">
+            <div className="min-h-screen  text-foreground">
+              {/* <BackgroundScene className="absolute inset-0 w-full h-full" /> */}
               <Navbar />
               <main className="pt-20">
                 <Routes>

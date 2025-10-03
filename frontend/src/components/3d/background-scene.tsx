@@ -37,7 +37,7 @@ export function BackgroundScene({ className }: BackgroundSceneProps) {
             >
                 <Suspense fallback={null}>
                     <CameraController />
-                    <NebulaEffect />
+                    {/* <NebulaEffect /> */}
                     <ParticleTrails />
                     <Stars
                         radius={300}
