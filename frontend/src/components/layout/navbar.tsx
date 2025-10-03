@@ -35,7 +35,7 @@ export function Navbar() {
       animate={{ y: 0 }}
       className="fixed top-0 left-0 right-0 z-50 backdrop-blur-sm border-border/50"
     >
-      <div className="mx-auto max-w-7xl flex items-center justify-between pt-4">
+      <div className="mx-auto max-w-7xl flex items-center justify-between p-4">
         {/* Logo */}
         <Link to={user && user.id ? "/dashboard" : "/"} className="flex items-center gap-3 group">
           <HackMateLogoProfessional 
@@ -63,7 +63,7 @@ export function Navbar() {
               {location.pathname === item.path && (
                 <motion.div
                   layoutId="navbar-indicator"
-                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full"
                 />
               )}
             </Link>
