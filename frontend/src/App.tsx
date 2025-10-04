@@ -26,6 +26,7 @@ import TeamChat from './pages/TeamChat';
 import Loader from './components/ui/Loader';
 import HackMateDonationPage from './pages/Donation';
 import { BackgroundScene } from './components/3d/background-scene';
+import CyberHackathonDetail from './pages/HackathonDetailPage';
 
 
 const AppContent: React.FC = () => {
@@ -100,9 +101,13 @@ const AppContent: React.FC = () => {
                     path="/settings" 
                     element={isAuthenticated ? <Settings /> : <Navigate to="/login" />} 
                   />
-                  <Route 
+                  {/* <Route 
                     path="/hackathon/:id" 
                     element={isAuthenticated ? <HackathonDetailsPage /> : <Navigate to="/login" />} 
+                  /> */}
+                  <Route 
+                    path="/hackathon/:id" 
+                    element={isAuthenticated ? <CyberHackathonDetail /> : <Navigate to="/login" />} 
                   />
                    <Route 
                     path="/team" 

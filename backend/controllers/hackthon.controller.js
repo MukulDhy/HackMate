@@ -142,12 +142,41 @@ export const getHackathon = async (req, res) => {
   }
 };
 
+export const getHackathonByHackathonId = async (req, res) => {
+  try {
+    const hackathon = await Hackathon.findOne({ hackName: req.params.id });
+
+    if (!hackathon) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Hackathon not found" });
+    }
+
+    res.status(200).json({ success: true, data: hackathon });
+  } catch (error) {
+    logger.info("Get hackathon error:", error);
+
+    if (error.name === "CastError") {
+      return res
+        .status(404)
+        .json({ success: false, message: "Hackathon not found" });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Error fetching hackathon",
+      error: error.message,
+    });
+  }
+};
 // @desc    Create hackathon
 // @route   POST /api/hackathons
 // @access  Admin only
 export const createHackathon = async (req, res) => {
   try {
     const {
+      hackName,
+      extraDetail,
       title,
       description,
       registrationDeadline,
@@ -171,10 +200,12 @@ export const createHackathon = async (req, res) => {
       organizer,
       faqs,
       socialLinks,
+      minParticipantsToFormTeam,
     } = req.body;
 
-    // Validate required fields
+    // ✅ Validate required fields
     if (
+      !hackName ||
       !title ||
       !description ||
       !registrationDeadline ||
@@ -183,45 +214,12 @@ export const createHackathon = async (req, res) => {
     ) {
       return res.status(400).json({
         success: false,
-        message: "Please provide all required fields",
+        message:
+          "Please provide hackName, title, description, registrationDeadline, startDate, and endDate",
       });
     }
 
-    // Validate dates
-    const regDeadline = new Date(registrationDeadline);
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const now = new Date();
-
-    if (regDeadline <= now) {
-      return res.status(400).json({
-        success: false,
-        message: "Registration deadline must be in the future",
-      });
-    }
-
-    if (start <= regDeadline) {
-      return res.status(400).json({
-        success: false,
-        message: "Start date must be after registration deadline",
-      });
-    }
-
-    if (end <= start) {
-      return res.status(400).json({
-        success: false,
-        message: "End date must be after start date",
-      });
-    }
-
-    if (winnerAnnouncementDate && new Date(winnerAnnouncementDate) <= end) {
-      return res.status(400).json({
-        success: false,
-        message: "Winner announcement date must be after end date",
-      });
-    }
-
-    // Validate problem statements
+    // ✅ Validate problem statements
     if (!problemStatements || problemStatements.length === 0) {
       return res.status(400).json({
         success: false,
@@ -229,29 +227,57 @@ export const createHackathon = async (req, res) => {
       });
     }
 
-    // Determine initial status based on dates
-    let status;
-    // if (regDeadline > now) {
-    //   status = "registration_open";
-    // } else if (start > now) {
-    //   status = "upcoming";
-    // } else if (end > now) {
-    //   status = "ongoing";
-    // } else {
-    //   status = "completed";
-    // }
-    status = "registration_open";
-    // <removed 27-join-hackathon 20-09-2025>[
-    // const participants = [
-    //   "68b723514b797de7510da085",
-    //   "68c663a30e8844c002a0b519",
-    //   "68c6a7ef7015d3dcc9bc5844",
-    //   "68c6ae4d7015d3dcc9bc58ab",
-    //   "68c6a9147015d3dcc9bc586c",
-    // ];
-    // <removed 27-join-hackathon 20-09-2025>]
-    const participants = [];
+    // ✅ Validate dates
+    const regDeadline = new Date(registrationDeadline);
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const now = new Date();
+
+    if (regDeadline <= now) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Registration deadline must be in the future",
+        });
+    }
+
+    if (start <= regDeadline) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Start date must be after registration deadline",
+        });
+    }
+
+    if (end <= start) {
+      return res
+        .status(400)
+        .json({ success: false, message: "End date must be after start date" });
+    }
+
+    if (winnerAnnouncementDate && new Date(winnerAnnouncementDate) <= end) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Winner announcement date must be after end date",
+        });
+    }
+
+    // ✅ Determine status automatically
+    let status = "registration_open";
+    if (now > regDeadline && now < start) status = "registration_closed";
+    if (now >= start && now <= end) status = "ongoing";
+    if (now > end && !winnerAnnouncementDate) status = "winner_to_announced";
+    if (winnerAnnouncementDate && now > new Date(winnerAnnouncementDate))
+      status = "completed";
+
+    // ✅ Create Hackathon
     const hackathon = await Hackathon.create({
+      hackName,
+      extraDetail,
       title,
       description,
       registrationDeadline,
@@ -265,7 +291,6 @@ export const createHackathon = async (req, res) => {
       registrationFee,
       prizes,
       tags,
-      participants,
       maxRegistrations,
       requirements,
       rules,
@@ -276,17 +301,10 @@ export const createHackathon = async (req, res) => {
       organizer,
       faqs,
       socialLinks,
+      minParticipantsToFormTeam,
       status,
     });
-    // <removed 27-join-hackathon 20-09-2025>[
-    // await Promise.all(
-    //   participants.map((id) =>
-    //     User.findByIdAndUpdate(new mongoose.Types.ObjectId(id), {
-    //       currentHackathonId: hackathon._id,
-    //     })
-    //   )
-    // );
-    // <removed 27-join-hackathon 20-09-2025>]
+
     res.status(201).json({
       success: true,
       message: "Hackathon created successfully",
@@ -481,7 +499,7 @@ export const leaveHackathon = async (req, res) => {
       // Clean up the user's currentHackathonId since the hackathon doesn't exist
       user.currentHackathonId = null;
       await user.save();
-      
+
       return res.status(404).json({
         success: false,
         message: "Hackathon not found",
@@ -520,7 +538,7 @@ export const leaveHackathon = async (req, res) => {
       data: {
         hackathonId: hackathon._id,
         hackathonName: hackathon.name,
-        totalMembersJoined: hackathon.totalMembersJoined
+        totalMembersJoined: hackathon.totalMembersJoined,
       },
     });
   } catch (error) {

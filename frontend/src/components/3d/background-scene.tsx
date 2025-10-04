@@ -53,7 +53,7 @@ export function BackgroundScene({ className }: BackgroundSceneProps) {
                     <OrbitControls
                         enableZoom={false}
                         enablePan={false}
-                        enableRotate={false}
+                        enableRotate={true}
                         autoRotate={true}
                         autoRotateSpeed={0.05}
                     />

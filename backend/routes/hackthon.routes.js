@@ -12,6 +12,7 @@ import {
   getHackathonsByTag,
   joinHackathon,
   leaveHackathon,
+  getHackathonByHackathonId,
 } from "../controllers/hackthon.controller.js";
 import { protect, authorize } from "../middlewares/auth.js";
 
@@ -22,6 +23,7 @@ router.get("/", getHackathons);
 router.get("/featured", getFeaturedHackathons);
 router.get("/tags/:tag", getHackathonsByTag);
 router.get("/:id", getHackathon);
+router.get("/name/:id", getHackathonByHackathonId);
 
 // Admin only routes
 // router.use(protect); // Apply authentication to all routes below
